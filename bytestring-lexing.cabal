@@ -1,5 +1,5 @@
 Name:                bytestring-lexing
-Version:             0.1
+Version:             0.1.0.1
 Synopsis:            Parse literals efficiently from bytestrings
 Description:         Parse literals efficiently from bytestrings
 License:             BSD3
@@ -9,7 +9,7 @@ Copyright:           Copyright (c) Don Stewart 2008
 Author:              Don Stewart
 Maintainer:          dons@galois.com
 Stability:           provisional
-Homepage:            http://code.haskell.org/~dons/code/bytestring-double
+Homepage:            http://code.haskell.org/~dons/code/bytestring-lexing
 Tested-With:         GHC ==6.8.2
 Build-Type:          Simple
 Cabal-Version:       >= 1.2
