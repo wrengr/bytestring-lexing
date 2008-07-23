@@ -16,7 +16,7 @@
 -- Efficiently parse floating point literals from a ByteString
 --
 
-module Data.ByteString.Lex.Double ( readDouble ) where
+module Data.ByteString.Lex.Double ( readDouble, unsafeReadDouble ) where
 
 import qualified Data.ByteString as B
 import Data.ByteString.Internal
@@ -89,7 +89,7 @@ readDouble str = case alexScan (AlexInput '\n' str) 0 of
     AlexEOF            -> Nothing
     AlexError _        -> Nothing
     AlexToken (AlexInput _ rest) n _ ->
-       case strtod (B.unsafeTake n str) of d -> Just $! (d , rest)
+       case strtod (B.unsafeTake n str) of d -> d `seq` Just $! (d , rest)
 
 -- Safe, minimal copy of substring identified by Alex.
 strtod :: ByteString -> Double
@@ -99,26 +99,32 @@ strtod b = inlinePerformIO $ B.useAsCString b $ \ptr -> c_strtod ptr nullPtr
 foreign import ccall unsafe "stdlib.h strtod" 
     c_strtod :: CString -> Ptr CString -> IO Double
 
--- Manual CPR 
-{-
-data T = T {-# UNPACK #-}!Double {-# UNPACK #-}!Bool
+------------------------------------------------------------------------
+--
 
-strtod :: ByteString -> T
--- strtod b | B.null b = T 0 False
-strtod b = inlinePerformIO $
+-- | Bare bones, unsafe wrapper for strtod. This provides a non-copying
+-- direct parsing of Double values from a ByteString. It uses strtod
+-- directly on the bytestring buffer. strtod requires the string to be
+-- null terminated, or for a guarantee that parsing will find a floating
+-- point value before the end of the string.
+--
+unsafeReadDouble :: ByteString -> Maybe (Double, ByteString)
+unsafeReadDouble b | B.null b = Nothing
+unsafeReadDouble b = inlinePerformIO $
     alloca $ \resptr ->
-    B.useAsCString b $ \ptr -> do -- copy just the bytes we want to parse
+    B.unsafeUseAsCString b $ \ptr -> do -- copy just the bytes we want to parse
 --      resetErrno
         d      <- c_strtod ptr resptr  -- 
 --      err    <- getErrno
         newPtr <- peek resptr
 
         return $! case d of
-            0 | newPtr == ptr -> T 0 False
+            0 | newPtr == ptr -> Nothing
 --          _ | err == eRANGE -> Nothing -- adds 10% overhead
-            _ | otherwise  -> T (realToFrac d) True
-            --      rest = B.drop (newPtr `minusPtr` ptr) b
-{-# INLINE strtod #-}            --
--}
+            _ | otherwise  ->
+                    let rest = B.unsafeDrop (newPtr `minusPtr` ptr) b
+                        z    = realToFrac d
+                    in z `seq` rest `seq` Just $! (z, rest)
+{-# INLINE unsafeReadDouble #-}
 
-}
+} 
