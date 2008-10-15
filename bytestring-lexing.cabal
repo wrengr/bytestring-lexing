@@ -1,5 +1,5 @@
 Name:                bytestring-lexing
-Version:             0.1.3
+Version:             0.2
 Synopsis:            Parse literals efficiently from bytestrings
 Description:         Parse literals efficiently from bytestrings
 License:             BSD3
