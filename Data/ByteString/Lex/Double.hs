@@ -1,5 +1,5 @@
 {-# OPTIONS -fglasgow-exts -cpp #-}
-{-# LINE 1 "Data/ByteString/Lex/Double.x" #-}
+{-# LINE 1 "Double.x" #-}
  {-*- haskell -*-}
 
 --------------------------------------------------------------------
@@ -170,7 +170,7 @@ alex_deflt :: AlexAddr
 alex_deflt = AlexA# "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"#
 
 alex_accept = listArray (0::Int,16) [[],[],[(AlexAcc (alex_action_0))],[(AlexAcc (alex_action_0))],[(AlexAcc (alex_action_0))],[(AlexAcc (alex_action_0))],[(AlexAcc (alex_action_0))],[(AlexAcc (alex_action_0))],[(AlexAcc (alex_action_0))],[],[],[],[],[],[],[],[]]
-{-# LINE 54 "Data/ByteString/Lex/Double.x" #-}
+{-# LINE 54 "Double.x" #-}
 
 
 -- | Parse the initial portion of the ByteString as a Double precision
@@ -219,27 +219,33 @@ strtod b = inlinePerformIO $ B.useAsCString b $ \ptr -> c_strtod ptr nullPtr
 foreign import ccall unsafe "stdlib.h strtod" 
     c_strtod :: CString -> Ptr CString -> IO Double
 
--- Manual CPR 
-{-
-data T = T {-# UNPACK #-}!Double {-# UNPACK #-}!Bool
+------------------------------------------------------------------------
+--
 
-strtod :: ByteString -> T
--- strtod b | B.null b = T 0 False
-strtod b = inlinePerformIO $
+-- | Bare bones, unsafe wrapper for strtod. This provides a non-copying
+-- direct parsing of Double values from a ByteString. It uses strtod
+-- directly on the bytestring buffer. strtod requires the string to be
+-- null terminated, or for a guarantee that parsing will find a floating
+-- point value before the end of the string.
+--
+unsafeReadDouble :: ByteString -> Maybe (Double, ByteString)
+unsafeReadDouble b | B.null b = Nothing
+unsafeReadDouble b = inlinePerformIO $
     alloca $ \resptr ->
-    B.useAsCString b $ \ptr -> do -- copy just the bytes we want to parse
+    B.unsafeUseAsCString b $ \ptr -> do -- copy just the bytes we want to parse
 --      resetErrno
         d      <- c_strtod ptr resptr  -- 
 --      err    <- getErrno
         newPtr <- peek resptr
 
         return $! case d of
-            0 | newPtr == ptr -> T 0 False
+            0 | newPtr == ptr -> Nothing
 --          _ | err == eRANGE -> Nothing -- adds 10% overhead
-            _ | otherwise  -> T (realToFrac d) True
-            --      rest = B.drop (newPtr `minusPtr` ptr) b
-{-# INLINE strtod #-}            --
--}
+            _ | otherwise  ->
+                    let rest = B.unsafeDrop (newPtr `minusPtr` ptr) b
+                        z    = realToFrac d
+                    in z `seq` rest `seq` Just $! (z, rest)
+{-# INLINE unsafeReadDouble #-}
 
 
 alex_action_0 =  strtod 
