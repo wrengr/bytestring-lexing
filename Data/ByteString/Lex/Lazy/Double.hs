@@ -1,10 +1,10 @@
 {-# OPTIONS -fglasgow-exts -cpp #-}
-{-# LINE 1 "Data/ByteString/Lex/Double.x" #-}
+{-# LINE 1 "Data/ByteString/Lex/Lazy/Double.x" #-}
  {-*- haskell -*-}
 
 --------------------------------------------------------------------
 -- |
--- Module    : Data.ByteString.Lex.Double
+-- Module    : Data.ByteString.Lex.Lazy.Double
 -- Copyright : (c) Galois, Inc. 2008
 -- License   : All rights reserved
 --
@@ -17,16 +17,11 @@
 -- Efficiently parse floating point literals from a ByteString
 --
 
-module Data.ByteString.Lex.Double ( readDouble, unsafeReadDouble ) where
+module Data.ByteString.Lex.Lazy.Double ( readDouble ) where
 
-import qualified Data.ByteString as B
-import Data.ByteString.Internal
+import qualified Data.ByteString.Lazy as LB
+import qualified Data.ByteString as SB
 import Data.ByteString.Lex.Internal (strtod)
-import qualified Data.ByteString.Unsafe as B
-
-import Foreign
-import Foreign.C.Types
-import Foreign.C.String
 
 
 #if __GLASGOW_HASKELL__ >= 603
@@ -60,13 +55,13 @@ import GlaExts
 
 
 
+import qualified Data.ByteString.Lazy.Char8 as ByteString
 
 
 
 
-import qualified Data.ByteString.Char8    as ByteString
-import qualified Data.ByteString.Internal as ByteString
-import qualified Data.ByteString.Unsafe   as ByteString
+
+
 
 
 
@@ -110,32 +105,27 @@ import qualified Data.ByteString.Unsafe   as ByteString
 -- -----------------------------------------------------------------------------
 -- Basic wrapper, ByteString version
 
-{-# LINE 297 "templates/wrappers.hs" #-}
 
+type AlexInput = (Char,ByteString.ByteString)
 
+alexGetChar (_, cs) | ByteString.null cs = Nothing
+                    | otherwise          = Just (ByteString.head cs, (ByteString.head cs, ByteString.tail cs))
 
-data AlexInput = AlexInput { alexChar :: {-# UNPACK #-}!Char
-                           , alexStr  :: {-# UNPACK #-}!ByteString.ByteString }
-
-alexGetChar (AlexInput _ cs)
-    | ByteString.null cs = Nothing
-    | otherwise          = Just $!  (ByteString.head cs, AlexInput c cs')
-    where
-        (c,cs') = (ByteString.w2c (ByteString.unsafeHead cs)
-                  , ByteString.unsafeTail cs)
-
-alexInputPrevChar = alexChar
+alexInputPrevChar (c,_) = c
 
 -- alexScanTokens :: String -> [token]
-alexScanTokens str = go (AlexInput '\n' str)
-  where go inp@(AlexInput _ str) =
+alexScanTokens str = go ('\n',str)
+  where go inp@(_,str) =
           case alexScan inp 0 of
                 AlexEOF -> []
                 AlexError _ -> error "lexical error"
                 AlexSkip  inp' len     -> go inp'
-                AlexToken inp' len act -> act (ByteString.unsafeTake len str) : go inp'
+                AlexToken inp' len act -> act (ByteString.take (fromIntegral len) str) : go inp'
 
 
+
+
+{-# LINE 322 "templates/wrappers.hs" #-}
 
 
 -- -----------------------------------------------------------------------------
@@ -170,7 +160,7 @@ alex_deflt :: AlexAddr
 alex_deflt = AlexA# "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"#
 
 alex_accept = listArray (0::Int,16) [[],[],[(AlexAcc (alex_action_0))],[(AlexAcc (alex_action_0))],[(AlexAcc (alex_action_0))],[(AlexAcc (alex_action_0))],[(AlexAcc (alex_action_0))],[(AlexAcc (alex_action_0))],[(AlexAcc (alex_action_0))],[],[],[],[],[],[],[],[]]
-{-# LINE 54 "Data/ByteString/Lex/Double.x" #-}
+{-# LINE 49 "Data/ByteString/Lex/Lazy/Double.x" #-}
 
 
 -- | Parse the initial portion of the ByteString as a Double precision
@@ -204,45 +194,17 @@ alex_accept = listArray (0::Int,16) [[],[],[(AlexAcc (alex_action_0))],[(AlexAcc
 -- >                     Nothing       -> n
 -- >                     Just (k,rest) -> go (n+k) (S.tail rest)
 --
-readDouble :: ByteString -> Maybe (Double, ByteString)
-readDouble str = case alexScan (AlexInput '\n' str) 0 of
+readDouble :: LB.ByteString -> Maybe (Double, LB.ByteString)
+readDouble str = case alexScan ('\n', str) 0 of
     AlexEOF            -> Nothing
     AlexError _        -> Nothing
-    AlexToken (AlexInput _ rest) n _ ->
-       case strtod (B.unsafeTake n str) of d -> d `seq` Just $! (d , rest)
+    AlexToken (_, rest) n _ ->
+       case strtod . strict . LB.take (fromIntegral n) $ str of
+         d -> Just $! (d , rest)
 
--- Safe, minimal copy of substring identified by Alex.
-strtod :: ByteString -> Double
-strtod b = inlinePerformIO $ B.useAsCString b $ \ptr -> c_strtod ptr nullPtr
-{-# INLINE strtod #-}
+strict = SB.concat . LB.toChunks
 
-foreign import ccall unsafe "stdlib.h strtod" 
-    c_strtod :: CString -> Ptr CString -> IO Double
-
--- Manual CPR 
-{-
-data T = T {-# UNPACK #-}!Double {-# UNPACK #-}!Bool
-
-strtod :: ByteString -> T
--- strtod b | B.null b = T 0 False
-strtod b = inlinePerformIO $
-    alloca $ \resptr ->
-    B.useAsCString b $ \ptr -> do -- copy just the bytes we want to parse
---      resetErrno
-        d      <- c_strtod ptr resptr  -- 
---      err    <- getErrno
-        newPtr <- peek resptr
-
-        return $! case d of
-            0 | newPtr == ptr -> T 0 False
---          _ | err == eRANGE -> Nothing -- adds 10% overhead
-            _ | otherwise  -> T (realToFrac d) True
-            --      rest = B.drop (newPtr `minusPtr` ptr) b
-{-# INLINE strtod #-}            --
--}
-
-
-alex_action_0 =  strtod 
+alex_action_0 =  strtod . strict 
 {-# LINE 1 "templates/GenericTemplate.hs" #-}
 {-# LINE 1 "templates/GenericTemplate.hs" #-}
 {-# LINE 1 "<built-in>" #-}

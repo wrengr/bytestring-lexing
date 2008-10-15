@@ -2,7 +2,7 @@
 
 --------------------------------------------------------------------
 -- |
--- Module    : Data.ByteString.Lex.Double
+-- Module    : Data.ByteString.Lex.Lazy.Double
 -- Copyright : (c) Galois, Inc. 2008
 -- License   : All rights reserved
 --
@@ -15,20 +15,15 @@
 -- Efficiently parse floating point literals from a ByteString
 --
 
-module Data.ByteString.Lex.Double ( readDouble, unsafeReadDouble ) where
+module Data.ByteString.Lex.Lazy.Double ( readDouble ) where
 
-import qualified Data.ByteString as B
-import Data.ByteString.Internal
+import qualified Data.ByteString.Lazy as LB
+import qualified Data.ByteString as SB
 import Data.ByteString.Lex.Internal (strtod)
-import qualified Data.ByteString.Unsafe as B
-
-import Foreign
-import Foreign.C.Types
-import Foreign.C.String
 
 }
 
-%wrapper "strict-bytestring"
+%wrapper "basic-bytestring"
 
 $space       = [\ \t\xa0]
 $digit       = 0-9
@@ -49,7 +44,7 @@ $hexit       = [$digit A-F a-f]
 
 lex :-
 
-@sign? @number { strtod }
+@sign? @number { strtod . strict }
 
 {
 
@@ -84,41 +79,13 @@ lex :-
 -- >                     Nothing       -> n
 -- >                     Just (k,rest) -> go (n+k) (S.tail rest)
 --
-readDouble :: ByteString -> Maybe (Double, ByteString)
-readDouble str = case alexScan (AlexInput '\n' str) 0 of
+readDouble :: LB.ByteString -> Maybe (Double, LB.ByteString)
+readDouble str = case alexScan ('\n', str) 0 of
     AlexEOF            -> Nothing
     AlexError _        -> Nothing
-    AlexToken (AlexInput _ rest) n _ ->
-       case strtod (B.unsafeTake n str) of d -> d `seq` Just $! (d , rest)
+    AlexToken (_, rest) n _ ->
+       case strtod . strict . LB.take (fromIntegral n) $ str of
+         d -> Just $! (d , rest)
 
--- Safe, minimal copy of substring identified by Alex.
-strtod :: ByteString -> Double
-strtod b = inlinePerformIO $ B.useAsCString b $ \ptr -> c_strtod ptr nullPtr
-{-# INLINE strtod #-}
-
-foreign import ccall unsafe "stdlib.h strtod" 
-    c_strtod :: CString -> Ptr CString -> IO Double
-
--- Manual CPR 
-{-
-data T = T {-# UNPACK #-}!Double {-# UNPACK #-}!Bool
-
-strtod :: ByteString -> T
--- strtod b | B.null b = T 0 False
-strtod b = inlinePerformIO $
-    alloca $ \resptr ->
-    B.useAsCString b $ \ptr -> do -- copy just the bytes we want to parse
---      resetErrno
-        d      <- c_strtod ptr resptr  -- 
---      err    <- getErrno
-        newPtr <- peek resptr
-
-        return $! case d of
-            0 | newPtr == ptr -> T 0 False
---          _ | err == eRANGE -> Nothing -- adds 10% overhead
-            _ | otherwise  -> T (realToFrac d) True
-            --      rest = B.drop (newPtr `minusPtr` ptr) b
-{-# INLINE strtod #-}            --
--}
-
+strict = SB.concat . LB.toChunks
 }
