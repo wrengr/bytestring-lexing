@@ -1,6 +1,4 @@
-{ {-*- haskell -*-}
-
---------------------------------------------------------------------
+{
 -- |
 -- Module    : Data.ByteString.Lex.Double
 -- Copyright : (c) Galois, Inc. 2008
@@ -19,7 +17,7 @@ module Data.ByteString.Lex.Double ( readDouble, unsafeReadDouble ) where
 
 import qualified Data.ByteString as B
 import Data.ByteString.Internal
-import Data.ByteString.Lex.Internal (strtod)
+import Data.ByteString.Lex.Internal (strtod, c_strtod)
 import qualified Data.ByteString.Unsafe as B
 
 import Foreign
@@ -89,15 +87,17 @@ readDouble str = case alexScan (AlexInput '\n' str) 0 of
     AlexEOF            -> Nothing
     AlexError _        -> Nothing
     AlexToken (AlexInput _ rest) n _ ->
-       case my_strtod (B.unsafeTake n str) of d -> d `seq` Just $! (d , rest)
+       case strtod (B.unsafeTake n str) of d -> d `seq` Just $! (d , rest)
 
 -- Safe, minimal copy of substring identified by Alex.
-my_strtod :: ByteString -> Double
-my_strtod b = inlinePerformIO $ B.useAsCString b $ \ptr -> c_strtod ptr nullPtr
-{-# INLINE my_strtod #-}
-
-foreign import ccall unsafe "stdlib.h strtod" 
-    c_strtod :: CString -> Ptr CString -> IO Double
+-- my_strtod :: ByteString -> Double
+-- my_strtod b = inlinePerformIO $ B.useAsCString b $ \ptr -> c_strtod ptr nullPtr
+-- {-# INLINE my_strtod #-}
+-- 
+-- foreign import ccall unsafe "stdlib.h strtod" 
+--     c_strtod :: CString -> Ptr CString -> IO Double
+--
+-- import from Internal
 
 ------------------------------------------------------------------------
 --

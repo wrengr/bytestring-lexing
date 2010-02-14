@@ -1,6 +1,4 @@
-{ {-*- haskell -*-}
-
---------------------------------------------------------------------
+{
 -- |
 -- Module    : Data.ByteString.Lex.Lazy.Double
 -- Copyright : (c) Galois, Inc. 2008

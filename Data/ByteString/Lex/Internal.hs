@@ -15,7 +15,7 @@
 -- Efficiently parse floating point literals from a ByteString
 --
 
-module Data.ByteString.Lex.Internal ( strtod ) where
+module Data.ByteString.Lex.Internal ( strtod, c_strtod ) where
 
 import Data.ByteString.Internal (inlinePerformIO)
 import qualified Data.ByteString as B
