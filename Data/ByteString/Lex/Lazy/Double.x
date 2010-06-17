@@ -62,7 +62,7 @@ lex :-
 --
 -- * And an optional exponent
 --
--- The result is returned as a pair of a double-precisoin floating point
+-- The result is returned as a pair of a double-precision floating point
 -- value, and the remaining input, or Nothing, should no parse be found.
 --
 -- For example, to sum a file of floating point numbers, one per line, 
