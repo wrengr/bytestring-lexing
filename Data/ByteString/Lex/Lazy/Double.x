@@ -1,14 +1,11 @@
 {
 -- |
 -- Module    : Data.ByteString.Lex.Lazy.Double
--- Copyright : (c) Galois, Inc. 2008
--- License   : All rights reserved
+-- Copyright : (c) Don Stewart 2008-2011.
+-- License   : BSD3
 --
--- Maintainer: Don Stewart <dons@galois.com>
--- Stability : provisional
--- Portability:
---
---------------------------------------------------------------------
+-- Maintainer: Don Stewart <dons00@gmail.com>
+-- Stability : stable
 --
 -- Efficiently parse floating point literals from a ByteString
 --
