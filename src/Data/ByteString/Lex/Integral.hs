@@ -34,7 +34,8 @@ import qualified Data.ByteString          as BS
 import qualified Data.ByteString.Char8    as BS8 (pack)
 import qualified Data.ByteString.Internal as BSI
 import qualified Data.ByteString.Unsafe   as BSU
-import           Data.Word                (Word, Word8)
+import           Data.Int
+import           Data.Word
 import           Data.Bits
 import           Foreign.Ptr              (Ptr, plusPtr)
 import qualified Foreign.ForeignPtr       as FFI (withForeignPtr)
@@ -56,8 +57,16 @@ import           Foreign.Storable         (peek, poke)
 readDecimal :: (Integral a) => ByteString -> Maybe (a, ByteString)
 {-# SPECIALIZE readDecimal ::
     ByteString -> Maybe (Int,     ByteString),
+    ByteString -> Maybe (Int8,    ByteString),
+    ByteString -> Maybe (Int16,   ByteString),
+    ByteString -> Maybe (Int32,   ByteString),
+    ByteString -> Maybe (Int64,   ByteString),
     ByteString -> Maybe (Integer, ByteString),
-    ByteString -> Maybe (Word,    ByteString) #-}
+    ByteString -> Maybe (Word,    ByteString),
+    ByteString -> Maybe (Word8,   ByteString),
+    ByteString -> Maybe (Word16,  ByteString),
+    ByteString -> Maybe (Word32,  ByteString),
+    ByteString -> Maybe (Word64,  ByteString) #-}
 readDecimal = start
     where
     -- This version is near verbatim from 'Data.ByteString.Char8.readInt'.
@@ -95,8 +104,16 @@ fromIntegral . BS8.foldl' (\i c -> i * 10 + Char.digitToInt c) 0 . BS8.takeWhile
 packDecimal :: (Integral a) => a -> Maybe ByteString
 {-# SPECIALIZE packDecimal ::
     Int     -> Maybe ByteString,
+    Int8    -> Maybe ByteString,
+    Int16   -> Maybe ByteString,
+    Int32   -> Maybe ByteString,
+    Int64   -> Maybe ByteString,
     Integer -> Maybe ByteString,
-    Word    -> Maybe ByteString #-}
+    Word    -> Maybe ByteString,
+    Word8   -> Maybe ByteString,
+    Word16  -> Maybe ByteString,
+    Word32  -> Maybe ByteString,
+    Word64  -> Maybe ByteString #-}
 packDecimal = start
     where
     start n0
@@ -151,8 +168,16 @@ packDecimal = start
 readHexadecimal :: (Integral a) => ByteString -> Maybe (a, ByteString)
 {-# SPECIALIZE readHexadecimal ::
     ByteString -> Maybe (Int,     ByteString),
+    ByteString -> Maybe (Int8,    ByteString),
+    ByteString -> Maybe (Int16,   ByteString),
+    ByteString -> Maybe (Int32,   ByteString),
+    ByteString -> Maybe (Int64,   ByteString),
     ByteString -> Maybe (Integer, ByteString),
-    ByteString -> Maybe (Word,    ByteString) #-}
+    ByteString -> Maybe (Word,    ByteString),
+    ByteString -> Maybe (Word8,   ByteString),
+    ByteString -> Maybe (Word16,  ByteString),
+    ByteString -> Maybe (Word32,  ByteString),
+    ByteString -> Maybe (Word64,  ByteString) #-}
 readHexadecimal = start
     where
     -- Beware the urge to make this code prettier, cf 'readDecimal'.
@@ -187,8 +212,16 @@ readHexadecimal = start
 packHexadecimal :: (Integral a) => a -> Maybe ByteString
 {-# SPECIALIZE packHexadecimal ::
     Int     -> Maybe ByteString,
+    Int8    -> Maybe ByteString,
+    Int16   -> Maybe ByteString,
+    Int32   -> Maybe ByteString,
+    Int64   -> Maybe ByteString,
     Integer -> Maybe ByteString,
-    Word    -> Maybe ByteString #-}
+    Word    -> Maybe ByteString,
+    Word8   -> Maybe ByteString,
+    Word16  -> Maybe ByteString,
+    Word32  -> Maybe ByteString,
+    Word64  -> Maybe ByteString #-}
 packHexadecimal = start
     where
     start n0
@@ -269,8 +302,16 @@ foldIO f z0 (BSI.PS fp off len) =
 readOctal :: (Integral a) => ByteString -> Maybe (a, ByteString)
 {-# SPECIALIZE readOctal ::
     ByteString -> Maybe (Int,     ByteString),
+    ByteString -> Maybe (Int8,    ByteString),
+    ByteString -> Maybe (Int16,   ByteString),
+    ByteString -> Maybe (Int32,   ByteString),
+    ByteString -> Maybe (Int64,   ByteString),
     ByteString -> Maybe (Integer, ByteString),
-    ByteString -> Maybe (Word,    ByteString) #-}
+    ByteString -> Maybe (Word,    ByteString),
+    ByteString -> Maybe (Word8,   ByteString),
+    ByteString -> Maybe (Word16,  ByteString),
+    ByteString -> Maybe (Word32,  ByteString),
+    ByteString -> Maybe (Word64,  ByteString) #-}
 readOctal = start
     where
     start xs
@@ -296,8 +337,16 @@ readOctal = start
 packOctal :: (Integral a) => a -> Maybe ByteString
 {-# SPECIALIZE packOctal ::
     Int     -> Maybe ByteString,
+    Int8    -> Maybe ByteString,
+    Int16   -> Maybe ByteString,
+    Int32   -> Maybe ByteString,
+    Int64   -> Maybe ByteString,
     Integer -> Maybe ByteString,
-    Word    -> Maybe ByteString #-}
+    Word    -> Maybe ByteString,
+    Word8   -> Maybe ByteString,
+    Word16  -> Maybe ByteString,
+    Word32  -> Maybe ByteString,
+    Word64  -> Maybe ByteString #-}
 packOctal = start
     where
     start n0
