@@ -42,7 +42,8 @@ Flag bytestringInBase
 ----------------------------------------------------------------
 Library
     Hs-Source-Dirs:    src
-    Exposed-Modules:   Data.ByteString.Lex.Double
+    Exposed-Modules:   Data.ByteString.Lex.Integral
+                       Data.ByteString.Lex.Double
                        Data.ByteString.Lex.Lazy.Double
     Other-Modules:     Data.ByteString.Lex.Internal
 
@@ -51,7 +52,7 @@ Library
         Build-Depends: base >= 4 && < 5
     else
         Build-Depends: base < 4
-        
+    
     if flag(bytestringInBase)
         Build-Depends: base >= 2.0 && < 2.2
     else
