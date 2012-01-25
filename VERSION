@@ -1,0 +1,12 @@
+1.0.0 (2012.00.00):
+    - Converted repo to Darcs-2 hashed format.
+    - wren ng thornton took over maintainership.
+
+0.2.1 (2010.02.14):
+0.2 (2008.10.15):
+    - Add support for lexing lazy bytestrings.
+
+0.1.2 (2008.07.23):
+0.1.0.2 (2008.07.23):
+0.1.0.1 (2008.07.19):
+0.1.0 (2008.07.19):
