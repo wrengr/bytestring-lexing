@@ -1,28 +1,34 @@
+{-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
-
---------------------------------------------------------------------
+----------------------------------------------------------------
+--                                                    2012.01.25
 -- |
--- Module    : Data.ByteString.Lex.Internal
--- Copyright : (c) Don Stewart 2008.
--- License   : BSD33
+-- Module      :  Data.ByteString.Lex.Internal
+-- Copyright   :  Copyright (c) 2008--2011 Don Stewart.
+-- License     :  BSD2/MIT
+-- Maintainer  :  wren@community.haskell.org
+-- Stability   :  stable
+-- Portability :  Haskell98 + FFI
 --
--- Maintainer: Don Stewart <dons00@gmail.com>
--- Stability : stable
---
--- Efficiently parse floating point literals from a ByteString
---
+-- Efficiently parse floating point literals from a 'ByteString'.
+----------------------------------------------------------------
 
-module Data.ByteString.Lex.Internal ( strtod, c_strtod ) where
+module Data.ByteString.Lex.Internal (strtod, c_strtod) where
 
-import Data.ByteString.Internal (inlinePerformIO)
-import qualified Data.ByteString as B
-import Foreign.C.String (CString)
-import Foreign.Ptr (Ptr, nullPtr)
+import qualified Data.ByteString.Internal as BSI (inlinePerformIO)
+import qualified Data.ByteString          as BS
+import           Foreign.C.String         (CString)
+import           Foreign.Ptr              (Ptr, nullPtr)
+----------------------------------------------------------------
 
--- Safe, minimal copy of substring identified by Alex.
-strtod :: B.ByteString -> Double
-strtod b = inlinePerformIO . B.useAsCString b $ \ptr -> c_strtod ptr nullPtr
+-- | Safe, minimal copy of substring identified by Alex.
+strtod :: BS.ByteString -> Double
 {-# INLINE strtod #-}
+strtod b =
+    BSI.inlinePerformIO . BS.useAsCString b $ \ptr -> c_strtod ptr nullPtr
 
 foreign import ccall unsafe "stdlib.h strtod" 
     c_strtod :: CString -> Ptr CString -> IO Double
+
+----------------------------------------------------------------
+----------------------------------------------------------- fin.
