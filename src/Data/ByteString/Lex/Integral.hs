@@ -128,16 +128,8 @@ readDecimal = start
                     loop (n * 10 + fromIntegral (w - 0x30)) (BSU.unsafeTail xs)
               | otherwise -> (n,xs)
 
-{- TODO:
-Provide a readDecimal_ implementation based on the magichash trick
-used in Warp, so that people can have Int64 versions without the
-fromIntegral overhead. If the Maybe(_,ByteString) overhead isn't
-too much, then maybe we can use the trick as our main implementation
-instead.
 
-    <http://www.mega-nerd.com/erikd/Blog/CodeHacking/Haskell/read_int.html>:
-    fromIntegral . BS8.foldl' (\i c -> i * 10 + Char.digitToInt c) 0 . BS8.takeWhile Char.isDigit
--}
+-- TODO: abstract out the test for (n0<0) so that we can inline it at use sites
 
 -- Beware the overflow issues of 'numDigits', noted at bottom.
 -- | Convert a positive integer into an (unsigned) ASCII decimal
@@ -175,22 +167,6 @@ packDecimal = start
             let (q,r) = n `quotRem` 10
             poke p (0x30 + fromIntegral r)
             loop q (p `plusPtr` negate 1)
-{-
--- N.B., this implementation is more obviously correct but much slower.
-packDecimal :: (Integral a) => a -> Maybe ByteString
-packDecimal = start
-    where
-    start n0
-        | n0 < 0    = Nothing
-        | otherwise = Just $ loop n0 BS.empty
-    
-    loop n xs
-        | n `seq` xs `seq` False = undefined -- for strictness analysis
-        | n <= 9    = BS.cons (0x30 + fromIntegral n) xs
-        | otherwise =
-            let (q,r) = n `quotRem` 10
-            in loop q (BS.cons (0x30 + fromIntegral r) xs)
--}
 
 
 ----------------------------------------------------------------
@@ -246,6 +222,8 @@ readHexadecimal = start
               | 0x66 >= w && w >= 0x61 ->
                     loop (n*16 + fromIntegral (w-0x61+10)) (BSU.unsafeTail xs)
               | otherwise -> (n,xs)
+
+-- TODO: Would it be worth trying to do the magichash trick used by Warp here? It'd really help remove branch prediction issues etc.
 
 
 -- | Convert a positive integer into a lower-case ASCII hexadecimal
