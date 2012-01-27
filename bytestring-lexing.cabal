@@ -59,7 +59,7 @@ Library
         Build-Depends: base < 2.0 || >= 3, bytestring
 
     if flag(splitBase)
-        Build-Depends: base >= 3 && < 5, bytestring
+        Build-Depends: base >= 3 && < 5, bytestring, array
     else
         Build-Depends: base < 3
 
