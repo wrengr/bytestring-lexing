@@ -115,7 +115,7 @@ readDecimal = start
         | BS.null xs = Nothing
         | otherwise  =
             case BSU.unsafeHead xs of
-            w | 0x30 <= w && w <= 0x39 ->
+            w | 0x39 >= w && w >= 0x30 ->
                     Just $ loop (fromIntegral (w - 0x30)) (BSU.unsafeTail xs)
               | otherwise -> Nothing
     
@@ -124,7 +124,7 @@ readDecimal = start
         | BS.null xs = (n, BS.empty)         -- not @xs@, to help GC
         | otherwise  =
             case BSU.unsafeHead xs of
-            w | 0x30 <= w && w <= 0x39 ->
+            w | 0x39 >= w && w >= 0x30 ->
                     loop (n * 10 + fromIntegral (w - 0x30)) (BSU.unsafeTail xs)
               | otherwise -> (n,xs)
 
@@ -226,11 +226,11 @@ readHexadecimal = start
         | BS.null xs = Nothing
         | otherwise  =
             case BSU.unsafeHead xs of
-            w | 0x30 <= w && w <= 0x39 ->
+            w | 0x39 >= w && w >= 0x30 ->
                     Just $ loop (fromIntegral (w - 0x30))  (BSU.unsafeTail xs)
-              | 0x41 <= w && w <= 0x46 ->
+              | 0x46 >= w && w >= 0x41 ->
                     Just $ loop (fromIntegral (w-0x41+10)) (BSU.unsafeTail xs)
-              | 0x61 <= w && w <= 0x66 ->
+              | 0x66 >= w && w >= 0x61 ->
                     Just $ loop (fromIntegral (w-0x61+10)) (BSU.unsafeTail xs)
               | otherwise -> Nothing
     
@@ -239,11 +239,11 @@ readHexadecimal = start
         | BS.null xs = (n, BS.empty)         -- not @xs@, to help GC
         | otherwise  =
             case BSU.unsafeHead xs of
-            w | 0x30 <= w && w <= 0x39 ->
+            w | 0x39 >= w && w >= 0x30 ->
                     loop (n*16 + fromIntegral (w - 0x30))  (BSU.unsafeTail xs)
-              | 0x41 <= w && w <= 0x46 ->
+              | 0x46 >= w && w >= 0x41 ->
                     loop (n*16 + fromIntegral (w-0x41+10)) (BSU.unsafeTail xs)
-              | 0x61 <= w && w <= 0x66 ->
+              | 0x66 >= w && w >= 0x61 ->
                     loop (n*16 + fromIntegral (w-0x61+10)) (BSU.unsafeTail xs)
               | otherwise -> (n,xs)
 
@@ -359,7 +359,7 @@ readOctal = start
         | BS.null xs = Nothing
         | otherwise  =
             case BSU.unsafeHead xs of
-            w | 0x30 <= w && w <= 0x37 ->
+            w | 0x37 >= w && w >= 0x30 ->
                     Just $ loop (fromIntegral (w - 0x30)) (BSU.unsafeTail xs)
               | otherwise -> Nothing
     
@@ -368,7 +368,7 @@ readOctal = start
         | BS.null xs = (n, BS.empty)         -- not @xs@, to help GC
         | otherwise  =
             case BSU.unsafeHead xs of
-            w | 0x30 <= w && w <= 0x37 ->
+            w | 0x37 >= w && w >= 0x30 ->
                     loop (n * 8 + fromIntegral (w - 0x30)) (BSU.unsafeTail xs)
               | otherwise -> (n,xs)
 
