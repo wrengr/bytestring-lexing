@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 ----------------------------------------------------------------
---                                                    2012.01.25
+--                                                    2012.01.26
 -- |
 -- Module      :  Data.ByteString.Lex.Integral
 -- Copyright   :  Copyright (c) 2010--2012 wren ng thornton
@@ -15,8 +15,11 @@
 ----------------------------------------------------------------
 module Data.ByteString.Lex.Integral
     (
+    -- * General combinators
+      readSigned
+    -- , packSigned
     -- * Decimal conversions
-      readDecimal
+    , readDecimal
     , packDecimal
     -- TODO: asDecimal -- this will be really hard to make efficient...
     -- * Hexadecimal conversions
@@ -42,18 +45,51 @@ import qualified Foreign.ForeignPtr       as FFI (withForeignPtr)
 import           Foreign.Storable         (peek, poke)
 
 ----------------------------------------------------------------
+----- General
+
+-- TODO: On the one hand, making this a combinator is "the right
+-- thing to do" for generality. However, for performance critical
+-- code, we could optimize away some extraneous guards if we just
+-- provide both signed and unsigned versions of the
+-- {read,pack}{Decimal,Octal,Hex} functions...
+
+
+-- | Adjust a reading function to recognize an optional leading
+-- sign. As with the other functions, we assume an ASCII-compatible
+-- encoding of the sign characters.
+readSigned
+    :: (Num a)
+    => (ByteString -> Maybe (a, ByteString))
+    ->  ByteString -> Maybe (a, ByteString)
+readSigned f xs
+    | BS.null xs = Nothing
+    | otherwise  =
+        case BSU.unsafeHead xs of
+        0x2D -> f (BSU.unsafeTail xs) >>= \(n, ys) -> return (negate n, ys)
+        0x2B -> f (BSU.unsafeTail xs)
+        _    -> f xs
+
+
+----------------------------------------------------------------
 ----- Decimal
 
--- | Read a positive integral value in ASCII decimal format. Returns
--- @Nothing@ if there is no integer at the beginning of the string,
--- otherwise returns @Just@ the integer read and the remainder of
--- the string.
+-- TODO: try a version which only performs fromIntegral after a
+-- group of digits instead of after each one, in order to reduce
+-- the scaling overhead. This would be especially important for
+-- Integer and (on 32-bit machines) Int64. Maybe typeclass-ify
+-- readDecimal in order to dynamically choose the optimal size of
+-- digit groups.
+
+
+-- | Read an unsigned\/positive integral value in ASCII decimal
+-- format. Returns @Nothing@ if there is no integer at the beginning
+-- of the string, otherwise returns @Just@ the integer read and the
+-- remainder of the string.
 --
--- The implementation is based on
--- @bytestring-0.9.1.7:Data.ByteString.Char8.readInt@ except we
--- only parse positive ints and do not recognize sign sigils. Sign
--- sigils are better handled by a combinator which reads the sign
--- character and then adjusts the result of this function appropriately.
+-- If you are extremely concerned with performance, then it is more
+-- performant to use this function at @Int@ or @Word@ and then to
+-- call 'fromIntegral' to perform the conversion at the end. However,
+-- doing this will make your code succeptible to overflow bugs.
 readDecimal :: (Integral a) => ByteString -> Maybe (a, ByteString)
 {-# SPECIALIZE readDecimal ::
     ByteString -> Maybe (Int,     ByteString),
@@ -69,10 +105,11 @@ readDecimal :: (Integral a) => ByteString -> Maybe (a, ByteString)
     ByteString -> Maybe (Word64,  ByteString) #-}
 readDecimal = start
     where
-    -- This version is near verbatim from 'Data.ByteString.Char8.readInt'.
-    -- We do remove the superstrictness by lifting the 'Just' so
-    -- it can be returned after seeing the first byte. Do beware
-    -- of the scope of 'fromIntegral', we want to avoid unnecessary
+    -- This implementation is near verbatim from
+    -- bytestring-0.9.1.7:Data.ByteString.Char8.readInt. We do
+    -- remove the superstrictness by lifting the 'Just' so it can
+    -- be returned after seeing the first byte. Do beware of the
+    -- scope of 'fromIntegral', we want to avoid unnecessary
     -- 'Integral' operations and do as much as possible in 'Word8'.
     start xs
         | BS.null xs = Nothing
@@ -92,10 +129,14 @@ readDecimal = start
               | otherwise -> (n,xs)
 
 {- TODO:
-Benchmark against the implementation
-<http://www.mega-nerd.com/erikd/Blog/CodeHacking/Haskell/read_int.html>:
+Provide a readDecimal_ implementation based on the magichash trick
+used in Warp, so that people can have Int64 versions without the
+fromIntegral overhead. If the Maybe(_,ByteString) overhead isn't
+too much, then maybe we can use the trick as our main implementation
+instead.
 
-fromIntegral . BS8.foldl' (\i c -> i * 10 + Char.digitToInt c) 0 . BS8.takeWhile Char.isDigit
+    <http://www.mega-nerd.com/erikd/Blog/CodeHacking/Haskell/read_int.html>:
+    fromIntegral . BS8.foldl' (\i c -> i * 10 + Char.digitToInt c) 0 . BS8.takeWhile Char.isDigit
 -}
 
 -- Beware the overflow issues of 'numDigits', noted at bottom.
