@@ -242,6 +242,7 @@ readDecimalInteger_2 :: ByteString -> Integer
 readDecimalInteger_2 = fromIntegral . readDecimalInt_
 
 
+----------------------------------------------------------------
 -- This splits the difference between the slow but correct
 -- 'readDecimalInt64_' (840ns) and the fast but incorrect
 -- 'readDecimalInt64_2' (175ns) at about 475ns on my machine. N.B.,
@@ -249,19 +250,18 @@ readDecimalInteger_2 = fromIntegral . readDecimalInt_
 -- performance down to the level of 'readIntOrig' and 'readIntegerBS';
 -- so the code duplication of unrolling the loop seems necessary
 -- for this approach.
-readDecimalInt64_3 :: ByteString -> Int64
-readDecimalInt64_3 = fst . fromMaybe (0,"") . start
+readDecimalIntegral_3 :: Integral a => ByteString -> Maybe (a, ByteString)
+readDecimalIntegral_3 = start
     where
     start xs
         | BS.null xs = Nothing
         | otherwise  =
             case BSU.unsafeHead xs of
             w | 0x39 >= w && w >= 0x30 ->
-                    Just $ loop1 0 (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+                    Just $ loop0 (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
               | otherwise -> Nothing
     
-    loop0 :: Int64 -> ByteString -> (Int64, ByteString)
-    loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8 :: Int64 -> Int -> ByteString -> (Int64, ByteString)
+    loop0 :: Integral a => a -> ByteString -> (a, ByteString)
     loop0 m xs
         | m `seq` xs `seq` False = undefined
         | BS.null xs = (m, BS.empty)
@@ -270,6 +270,8 @@ readDecimalInt64_3 = fst . fromMaybe (0,"") . start
             w | 0x39 >= w && w >= 0x30 ->
                     loop1 m (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
               | otherwise -> (m, xs)
+    
+    loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8 :: Integral a => a -> Int -> ByteString -> (a, ByteString)
     loop1 m n xs
         | m `seq` n `seq` xs `seq` False = undefined
         | BS.null xs = (m*10 + fromIntegral n, BS.empty)
@@ -335,6 +337,352 @@ readDecimalInt64_3 = fst . fromMaybe (0,"") . start
                     loop0 (m*1000000000 + fromIntegral (n*10 + fromIntegral(w-0x30))) (BSU.unsafeTail xs)
               | otherwise -> (m*100000000 + fromIntegral n, xs)
 
+readDecimalInt64_3 :: ByteString -> Int64
+readDecimalInt64_3 = fst . fromMaybe (0,"") . readDecimalIntegral_3
+
+readDecimalInteger_3 :: ByteString -> Integer
+readDecimalInteger_3 = fst . fromMaybe (0,"") . readDecimalIntegral_3
+
+----------------------------------------------------------------
+-- Try to add a fast track that removes the null tests. Doesn't help; hurts a little.
+readDecimalInt64_4 :: ByteString -> Int64
+readDecimalInt64_4 = fst . fromMaybe (0,"") . start
+    where
+    start xs
+        | BS.null xs = Nothing
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    Just $ loop0 (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> Nothing
+    
+    loop0 :: Int64 -> ByteString -> (Int64, ByteString)
+    loop0 m xs
+        | m `seq` xs `seq` False = undefined
+        | BS.length xs >= 9 = 
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    fast1 m (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m, xs)
+        | BS.null xs     = (m, BS.empty)
+        | otherwise      =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    finish1 m (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m, xs)
+    
+    fast1, fast2, fast3, fast4, fast5, fast6, fast7, fast8 :: Int64 -> Int -> ByteString -> (Int64, ByteString)
+    fast1 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    fast2 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*10 + fromIntegral n, xs)
+    fast2 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    fast3 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*100 + fromIntegral n, xs)
+    fast3 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    fast4 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*1000 + fromIntegral n, xs)
+    fast4 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    fast5 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*10000 + fromIntegral n, xs)
+    fast5 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    fast6 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*100000 + fromIntegral n, xs)
+    fast6 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    fast7 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*1000000 + fromIntegral n, xs)
+    fast7 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    fast8 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*10000000 + fromIntegral n, xs)
+    fast8 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    loop0 (m*1000000000 + fromIntegral (n*10 + fromIntegral(w-0x30))) (BSU.unsafeTail xs)
+              | otherwise -> (m*100000000 + fromIntegral n, xs)
+    
+    finish1, finish2, finish3, finish4, finish5, finish6, finish7, finish8 :: Int64 -> Int -> ByteString -> (Int64, ByteString)
+    finish1 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*10 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    finish2 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*10 + fromIntegral n, xs)
+    finish2 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*100 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    finish3 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*100 + fromIntegral n, xs)
+    finish3 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*1000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    finish4 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*1000 + fromIntegral n, xs)
+    finish4 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*10000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    finish5 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*10000 + fromIntegral n, xs)
+    finish5 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*100000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    finish6 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*100000 + fromIntegral n, xs)
+    finish6 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*1000000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    finish7 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*1000000 + fromIntegral n, xs)
+    finish7 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*10000000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    finish8 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*10000000 + fromIntegral n, xs)
+    finish8 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*100000000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    ( m*1000000000 + fromIntegral (n*10 + fromIntegral(w-0x30))
+                    , BSU.unsafeTail xs)
+              | otherwise -> (m*100000000 + fromIntegral n, xs)
+
+
+----------------------------------------------------------------
+-- Do a three stage unrolling for Integer. Only gives a marginal
+-- improvement, though really the payoff would be for things /much/
+-- larger than 64-bits.
+readDecimalInteger_5 :: ByteString -> Integer
+readDecimalInteger_5 = fst . fromMaybe (0,"") . start
+    where
+    start xs
+        | BS.null xs = Nothing
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    Just $ go00 (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> Nothing
+    
+    go00 :: Integer -> ByteString -> (Integer, ByteString)
+    go00 o xs
+        | o `seq` xs `seq` False = undefined
+        | BS.null xs = (o, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go01 o (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (o, xs)
+    
+    go01, go02, go03, go04, go05, go06, go07, go08
+        :: Integer -> Int -> ByteString -> (Integer, ByteString)
+    go01 o n xs
+        | o `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (o*10 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go02 o (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (o*10 + fromIntegral n, xs)
+    go02 o n xs
+        | o `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (o*100 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go03 o (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (o*100 + fromIntegral n, xs)
+    go03 o n xs
+        | o `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (o*1000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go04 o (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (o*1000 + fromIntegral n, xs)
+    go04 o n xs
+        | o `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (o*10000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go05 o (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (o*10000 + fromIntegral n, xs)
+    go05 o n xs
+        | o `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (o*100000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go06 o (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (o*100000 + fromIntegral n, xs)
+    go06 o n xs
+        | o `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (o*1000000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go07 o (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (o*1000000 + fromIntegral n, xs)
+    go07 o n xs
+        | o `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (o*10000000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go08 o (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (o*10000000 + fromIntegral n, xs)
+    go08 o n xs
+        | o `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (o*100000000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go90 o (fromIntegral (n*10 + fromIntegral(w-0x30))) (BSU.unsafeTail xs)
+              | otherwise -> (o*100000000 + fromIntegral n, xs)
+
+    go90 :: Integer -> Int64 -> ByteString -> (Integer, ByteString)
+    go90 o m xs
+        | o `seq` m `seq` xs `seq` False = undefined
+        | BS.null xs = (o*1000000000 + fromIntegral m, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go91 o m (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (o*1000000000 + fromIntegral m, xs)
+
+    go91, go92, go93, go94, go95, go96, go97, go98
+        :: Integer -> Int64 -> Int -> ByteString -> (Integer, ByteString)
+    go91 o m n xs
+        | o `seq` m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (o*1000000000000 + fromIntegral (m*10), BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go92 o m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (o*1000000000000 + fromIntegral (m*10), xs)
+    go92 o m n xs
+        | o `seq` m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (o*10000000000000 + fromIntegral (m*100), BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go93 o m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (o*10000000000000 + fromIntegral (m*100), xs)
+    go93 o m n xs
+        | o `seq` m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (o*100000000000000 + fromIntegral (m*1000), BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go94 o m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (o*100000000000000 + fromIntegral (m*1000), xs)
+    go94 o m n xs
+        | o `seq` m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (o*1000000000000000 + fromIntegral (m*10000), BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go95 o m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (o*1000000000000000 + fromIntegral (m*10000), xs)
+    go95 o m n xs
+        | o `seq` m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = ( o*10000000000000000 + fromIntegral (m*100000)
+                       , BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go96 o m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> 
+                        (o*10000000000000000 + fromIntegral
+                        (m*100000), xs)
+    go96 o m n xs
+        | o `seq` m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = ( o*100000000000000000 + fromIntegral (m*1000000)
+                       , BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go97 o m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise ->
+                        (o*100000000000000000 + fromIntegral
+                        (m*1000000), xs)
+    go97 o m n xs
+        | o `seq` m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = ( o*1000000000000000000 + fromIntegral (m*10000000)
+                       , BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go98 o m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise ->
+                        (o*1000000000000000000 + fromIntegral
+                        (m*10000000), xs)
+    go98 o m n xs
+        | o `seq` m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = ( o*10000000000000000000 + fromIntegral (m*100000000)
+                       , BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    go00
+                        (o*10000000000000000000 + fromIntegral
+                        (m*1000000000 + fromIntegral
+                        (n*10 + fromIntegral(w-0x30))))
+                        (BSU.unsafeTail xs)
+              | otherwise ->
+                        (o*10000000000000000000 + fromIntegral
+                        (m*100000000), xs)
+
+----------------------------------------------------------------
 ----------------------------------------------------------------
 -- A QuickCheck property. Test that for a number >= 0, converting it to
 -- a string using show and then reading the value back with the function
@@ -389,10 +737,16 @@ runQuickCheckTests = do
     QC.quickCheck (prop_read_show_idempotent readDecimalInt64_2)
     putStrLn "Checking readDecimalInt64_3..."
     QC.quickCheck (prop_read_show_idempotent readDecimalInt64_3)
+    putStrLn "Checking readDecimalInt64_4..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalInt64_4)
     putStrLn "Checking readDecimalInteger_..."
     QC.quickCheck (prop_read_show_idempotent readDecimalInteger_)
     putStrLn "Checking readDecimalInteger_2..."
     QC.quickCheck (prop_read_show_idempotent readDecimalInteger_2)
+    putStrLn "Checking readDecimalInteger_3..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalInteger_3)
+    putStrLn "Checking readDecimalInteger_5..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalInteger_5)
 
 
 runCriterionTests :: ByteString -> IO ()
@@ -436,6 +790,9 @@ runCriterionTests number =
             ]
         , bgroup "readDecimal (unrolled)"
             [ bench "readDecimalInt64_3"   $ nf readDecimalInt64_3 number
+            , bench "readDecimalInteger_3" $ nf readDecimalInteger_3 number
+            , bench "readDecimalInt64_4"   $ nf readDecimalInt64_4 number
+            , bench "readDecimalInteger_5" $ nf readDecimalInteger_5 number
             ]
         ]
 
