@@ -80,19 +80,22 @@ readInteger = readIntTC
 
 ----------------------------------------------------------------
 -- MagicHash version suggested by Vincent Hanquez.
-readIntMH :: Integral a => ByteString -> a
-readIntMH = fromIntegral . ireadInt64MH
+readIntegralMH :: Integral a => ByteString -> a
+readIntegralMH = fromIntegral . ireadInt64MH
     where
     ireadInt64MH :: ByteString -> Int64
     ireadInt64MH
         = BS8.foldl' (\i c -> i * 10 + fromIntegral (mhDigitToInt c)) 0
         . BS8.takeWhile C.isDigit
 
+readIntMH :: ByteString -> Int
+readIntMH = readIntegralMH
+
 readInt64MH :: ByteString -> Int64
-readInt64MH = readIntMH
+readInt64MH = readIntegralMH
 
 readIntegerMH :: ByteString -> Integer
-readIntegerMH = readIntMH
+readIntegerMH = readIntegralMH
 
 data Table = Table !Addr#
 
@@ -118,9 +121,56 @@ mhDigitToInt (C# i) = I# (word2Int# (indexWord8OffAddr# addr (ord# i)))
         \\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
         \\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
         \\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"#
-
 -- -> -- Fix a syntax highlighting bug in jEdit.
 
+-- A faster MagicHash version by Christoph Breitkopf
+readIntegralMHFast :: Integral a => ByteString -> a
+readIntegralMHFast s = go 0 0 (BS8.length s) s
+    where
+    go :: Integral a => a -> Int -> Int -> ByteString -> a
+    go i k n bs
+        | i `seq` k `seq` n `seq` bs `seq` False = undefined
+        | k >= n    = i
+        | v < 10    = go (10 * i + v) (k+1) n bs
+        | otherwise = i
+        where
+        v = fromIntegral (mhDigitToInt' (BS8.index bs k))
+
+readIntMHFast :: ByteString -> Int
+readIntMHFast = readIntegralMHFast
+
+readInt64MHFast :: ByteString -> Int64
+readInt64MHFast = readIntegralMHFast
+
+readIntegerMHFast :: ByteString -> Integer
+readIntegerMHFast = readIntegralMHFast
+
+
+mhDigitToInt' :: Char -> Int
+mhDigitToInt' (C# i) = I# (word2Int# (indexWord8OffAddr# addr (ord# i)))
+    where
+    !(Table addr) = table
+    table :: Table
+    table = Table
+        "\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f"#
+-- -> -- Fix a syntax highlighting bug in jEdit.
+
+----------------------------------------------------------------
 -- This is the one Warp actually uses. It's essentially the same as readInt64MH
 ----readIntWarp :: ByteString -> Integer
 ----readIntWarp s = fromIntegral $ RI.readInt64 s
@@ -256,12 +306,23 @@ runQuickCheckTests = do
     QC.quickCheck (prop_read_show_idempotent readInt64)
     putStrLn "Checking readInteger..."
     QC.quickCheck (prop_read_show_idempotent readInteger)
+    --
+    putStrLn "Checking readIntMH..."
+    QC.quickCheck (prop_read_show_idempotent readIntMH)
     putStrLn "Checking readInt64MH..."
     QC.quickCheck (prop_read_show_idempotent readInt64MH)
     putStrLn "Checking readIntegerMH..."
     QC.quickCheck (prop_read_show_idempotent readIntegerMH)
+    putStrLn "Checking readIntMHFast..."
+    QC.quickCheck (prop_read_show_idempotent readIntMHFast)
+    putStrLn "Checking readInt64MHFast..."
+    QC.quickCheck (prop_read_show_idempotent readInt64MHFast)
+    putStrLn "Checking readIntegerMHFast..."
+    QC.quickCheck (prop_read_show_idempotent readIntegerMHFast)
+    --
     ----putStrLn "Checking readIntWarp..."
     ----QC.quickCheck (prop_read_show_idempotent readIntWarp)
+    --
     putStrLn "Checking readDecimalInt_..."
     QC.quickCheck (prop_read_show_idempotent readDecimalInt_)
     putStrLn "Checking readDecimalInt64_..."
@@ -279,23 +340,41 @@ runQuickCheckTests = do
 runCriterionTests :: ByteString -> IO ()
 runCriterionTests number =
     defaultMain
-       [ bench "readIntOrig"   $ nf readIntOrig number
-       , bench "readDec"       $ nf readDec number
-       , bench "readIntegerBS" $ nf readIntegerBS number
-       , bench "readRaw"       $ nf readIntRaw number
-       , bench "readInt"       $ nf readInt number
-       , bench "readInt64"     $ nf readInt64 number
-       , bench "readInteger"   $ nf readInteger number
-       , bench "readInt64MH"   $ nf readInt64MH number
-       , bench "readIntegerMH" $ nf readIntegerMH number
-       ---- , bench "readIntWarp"   $ nf readIntWarp number
-       , bench "readDecimalInt_" $ nf readDecimalInt_ number
-       , bench "readDecimalInt64_" $ nf readDecimalInt64_ number
-       , bench "readDecimalInt64_2" $ nf readDecimalInt64_2 number
-       , bench "readDecimalInt64_3" $ nf readDecimalInt64_3 number
-       , bench "readDecimalInteger_" $ nf readDecimalInteger_ number
-       , bench "readDecimalInteger_2" $ nf readDecimalInteger_2 number
-       ]
+        [ bgroup "naive"
+            [ bench "readIntOrig"       $ nf readIntOrig number
+            , bench "readDec"           $ nf readDec number
+            , bench "readIntegerBS"     $ nf readIntegerBS number
+            , bench "readRaw"           $ nf readIntRaw number
+            ]
+        , bgroup "readIntTC"
+            [ bench "readInt"           $ nf readInt number
+            , bench "readInt64"         $ nf readInt64 number
+            , bench "readInteger"       $ nf readInteger number
+            ]
+        , bgroup "readIntegralMH"
+            [ bench "readIntMH"         $ nf readIntMH number
+            , bench "readInt64MH"       $ nf readInt64MH number
+            , bench "readIntegerMH"     $ nf readIntegerMH number
+            ]
+        , bgroup "readIntegralMHFast"
+            [ bench "readIntMHFast"     $ nf readIntMHFast number
+            , bench "readInt64MHFast"   $ nf readInt64MHFast number
+            , bench "readIntegerMHFast" $ nf readIntegerMHFast number
+            ]
+        ---- , bench "readIntWarp"   $ nf readIntWarp number
+        , bgroup "readDecimal (correct)"
+            [ bench "readDecimalInt_"      $ nf readDecimalInt_ number
+            , bench "readDecimalInt64_"    $ nf readDecimalInt64_ number
+            , bench "readDecimalInteger_"  $ nf readDecimalInteger_ number
+            ]
+        , bgroup "readDecimal (buggy fast)"
+            [ bench "readDecimalInt64_2"   $ nf readDecimalInt64_2 number
+            , bench "readDecimalInteger_2" $ nf readDecimalInteger_2 number
+            ]
+        , bgroup "readDecimal (unrolled)"
+            [ bench "readDecimalInt64_3"   $ nf readDecimalInt64_3 number
+            ]
+        ]
 
 main :: IO ()
 main = do
