@@ -34,6 +34,7 @@ import qualified Data.ByteString.Lex.Integral as BSLex (readDecimal)
 
 import GHC.Prim
 import GHC.Types
+import GHC.Word
 ----------------------------------------------------------------
 
 -- This is the absolute mimimal solution. It will return garbage
@@ -123,31 +124,22 @@ mhDigitToInt (C# i) = I# (word2Int# (indexWord8OffAddr# addr (ord# i)))
         \\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"#
 -- -> -- Fix a syntax highlighting bug in jEdit.
 
+----------------------------------------------------------------
 -- A faster MagicHash version by Christoph Breitkopf
 readIntegralMHFast :: Integral a => ByteString -> a
 readIntegralMHFast s = go 0 0 (BS8.length s) s
     where
     go :: Integral a => a -> Int -> Int -> ByteString -> a
-    go i k n bs
-        | i `seq` k `seq` n `seq` bs `seq` False = undefined
-        | k >= n    = i
-        | v < 10    = go (10 * i + v) (k+1) n bs
-        | otherwise = i
+    go n i len bs
+        | n `seq` i `seq` len `seq` bs `seq` False = undefined
+        | i >= len  = n
+        | v < 10    = go (10 * n + v) (i+1) len bs
+        | otherwise = n
         where
-        v = fromIntegral (mhDigitToInt' (BS8.index bs k))
+        v = fromIntegral (mhDigitToIntFast (BS8.index bs i))
 
-readIntMHFast :: ByteString -> Int
-readIntMHFast = readIntegralMHFast
-
-readInt64MHFast :: ByteString -> Int64
-readInt64MHFast = readIntegralMHFast
-
-readIntegerMHFast :: ByteString -> Integer
-readIntegerMHFast = readIntegralMHFast
-
-
-mhDigitToInt' :: Char -> Int
-mhDigitToInt' (C# i) = I# (word2Int# (indexWord8OffAddr# addr (ord# i)))
+mhDigitToIntFast :: Char -> Int
+mhDigitToIntFast (C# i) = I# (word2Int# (indexWord8OffAddr# addr (ord# i)))
     where
     !(Table addr) = table
     table :: Table
@@ -169,6 +161,64 @@ mhDigitToInt' (C# i) = I# (word2Int# (indexWord8OffAddr# addr (ord# i)))
         \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
         \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f"#
 -- -> -- Fix a syntax highlighting bug in jEdit.
+
+readIntMHFast :: ByteString -> Int
+readIntMHFast = readIntegralMHFast
+
+readInt64MHFast :: ByteString -> Int64
+readInt64MHFast = readIntegralMHFast
+
+readIntegerMHFast :: ByteString -> Integer
+readIntegerMHFast = readIntegralMHFast
+
+----------------------------------------------------------------
+-- Crank on it just a bit more
+readIntegralMHFast' :: Integral a => ByteString -> a
+readIntegralMHFast' s = go 0 0 s
+    where
+    len = BS8.length s
+    
+    go :: Integral a => a -> Int -> ByteString -> a
+    go n i bs
+        | n `seq` i `seq` bs `seq` False = undefined
+        | i >= len  = n
+        | v < 10    = go (10 * n + v) (i+1) bs
+        | otherwise = n
+        where
+        v = fromIntegral (mhDigitToIntFast' (BSU.unsafeIndex bs i))
+
+mhDigitToIntFast' :: Word8 -> Int
+mhDigitToIntFast' (W8# i) = I# (indexInt8OffAddr# addr (word2Int# i))
+    where
+    !(Table addr) = table
+    table :: Table
+    table = Table
+        "\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\
+        \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f"#
+-- -> -- Fix a syntax highlighting bug in jEdit.
+
+readIntMHFast' :: ByteString -> Int
+readIntMHFast' = readIntegralMHFast'
+
+readInt64MHFast' :: ByteString -> Int64
+readInt64MHFast' = readIntegralMHFast'
+
+readIntegerMHFast' :: ByteString -> Integer
+readIntegerMHFast' = readIntegralMHFast'
 
 ----------------------------------------------------------------
 -- This is the one Warp actually uses. It's essentially the same as readInt64MH
@@ -313,12 +363,20 @@ runQuickCheckTests = do
     QC.quickCheck (prop_read_show_idempotent readInt64MH)
     putStrLn "Checking readIntegerMH..."
     QC.quickCheck (prop_read_show_idempotent readIntegerMH)
+    --
     putStrLn "Checking readIntMHFast..."
     QC.quickCheck (prop_read_show_idempotent readIntMHFast)
     putStrLn "Checking readInt64MHFast..."
     QC.quickCheck (prop_read_show_idempotent readInt64MHFast)
     putStrLn "Checking readIntegerMHFast..."
     QC.quickCheck (prop_read_show_idempotent readIntegerMHFast)
+    --
+    putStrLn "Checking readIntMHFast'..."
+    QC.quickCheck (prop_read_show_idempotent readIntMHFast')
+    putStrLn "Checking readInt64MHFast'..."
+    QC.quickCheck (prop_read_show_idempotent readInt64MHFast')
+    putStrLn "Checking readIntegerMHFast'..."
+    QC.quickCheck (prop_read_show_idempotent readIntegerMHFast')
     --
     ----putStrLn "Checking readIntWarp..."
     ----QC.quickCheck (prop_read_show_idempotent readIntWarp)
@@ -360,6 +418,11 @@ runCriterionTests number =
             [ bench "readIntMHFast"     $ nf readIntMHFast number
             , bench "readInt64MHFast"   $ nf readInt64MHFast number
             , bench "readIntegerMHFast" $ nf readIntegerMHFast number
+            ]
+        , bgroup "readIntegralMHFast'"
+            [ bench "readIntMHFast'"     $ nf readIntMHFast' number
+            , bench "readInt64MHFast'"   $ nf readInt64MHFast' number
+            , bench "readIntegerMHFast'" $ nf readIntegerMHFast' number
             ]
         ---- , bench "readIntWarp"   $ nf readIntWarp number
         , bgroup "readDecimal (correct)"
