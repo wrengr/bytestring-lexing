@@ -78,7 +78,9 @@ readSigned f xs
 -- the scaling overhead. This would be especially important for
 -- Integer and (on 32-bit machines) Int64. Maybe typeclass-ify
 -- readDecimal in order to dynamically choose the optimal size of
--- digit groups.
+-- digit groups. E.g., the largest group that's safe to parse without
+-- possibility of overflow is 2 for Int8, 4 for Int16, 9 for Int32,
+-- 18 for Int64.
 
 
 -- | Read an unsigned\/non-negative integral value in ASCII decimal
@@ -89,7 +91,8 @@ readSigned f xs
 -- If you are extremely concerned with performance, then it is more
 -- performant to use this function at @Int@ or @Word@ and then to
 -- call 'fromIntegral' to perform the conversion at the end. However,
--- doing this will make your code succeptible to overflow bugs.
+-- doing this will make your code succeptible to overflow bugs if
+-- the target type is larger than @Int@.
 readDecimal :: (Integral a) => ByteString -> Maybe (a, ByteString)
 {-# SPECIALIZE readDecimal ::
     ByteString -> Maybe (Int,     ByteString),

@@ -22,6 +22,7 @@ import Data.Maybe      (fromMaybe)
 
 import qualified Data.ByteString       as BS
 import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString.Unsafe   as BSU
 import qualified Data.Char             as C
 import qualified Numeric               as N
 import qualified Test.QuickCheck       as QC
@@ -141,6 +142,99 @@ readDecimalInteger_2 :: ByteString -> Integer
 readDecimalInteger_2 = fromIntegral . readDecimalInt_
 
 
+-- This splits the difference between the slow but correct
+-- 'readDecimalInt64_' (840ns) and the fast but incorrect
+-- 'readDecimalInt64_2' (175ns) at about 475ns on my machine. N.B.,
+-- passing a parameter to track our position in the group reduces
+-- performance down to the level of 'readIntOrig' and 'readIntegerBS';
+-- so the code duplication of unrolling the loop seems necessary
+-- for this approach.
+readDecimalInt64_3 :: ByteString -> Int64
+readDecimalInt64_3 = fst . fromMaybe (0,"") . start
+    where
+    start xs
+        | BS.null xs = Nothing
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    Just $ loop1 0 (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> Nothing
+    
+    loop0 :: Int64 -> ByteString -> (Int64, ByteString)
+    loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8 :: Int64 -> Int -> ByteString -> (Int64, ByteString)
+    loop0 m xs
+        | m `seq` xs `seq` False = undefined
+        | BS.null xs = (m, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    loop1 m (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m, xs)
+    loop1 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*10 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    loop2 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*10 + fromIntegral n, xs)
+    loop2 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*100 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    loop3 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*100 + fromIntegral n, xs)
+    loop3 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*1000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    loop4 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*1000 + fromIntegral n, xs)
+    loop4 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*10000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    loop5 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*10000 + fromIntegral n, xs)
+    loop5 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*100000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    loop6 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*100000 + fromIntegral n, xs)
+    loop6 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*1000000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    loop7 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*1000000 + fromIntegral n, xs)
+    loop7 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*10000000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    loop8 m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (m*10000000 + fromIntegral n, xs)
+    loop8 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = (m*100000000 + fromIntegral n, BS.empty)
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    loop0 (m*1000000000 + fromIntegral (n*10 + fromIntegral(w-0x30))) (BSU.unsafeTail xs)
+              | otherwise -> (m*100000000 + fromIntegral n, xs)
+
 ----------------------------------------------------------------
 -- A QuickCheck property. Test that for a number >= 0, converting it to
 -- a string using show and then reading the value back with the function
@@ -174,6 +268,8 @@ runQuickCheckTests = do
     QC.quickCheck (prop_read_show_idempotent readDecimalInt64_)
     putStrLn "Checking readDecimalInt64_2..."
     QC.quickCheck (prop_read_show_idempotent readDecimalInt64_2)
+    putStrLn "Checking readDecimalInt64_3..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalInt64_3)
     putStrLn "Checking readDecimalInteger_..."
     QC.quickCheck (prop_read_show_idempotent readDecimalInteger_)
     putStrLn "Checking readDecimalInteger_2..."
@@ -196,6 +292,7 @@ runCriterionTests number =
        , bench "readDecimalInt_" $ nf readDecimalInt_ number
        , bench "readDecimalInt64_" $ nf readDecimalInt64_ number
        , bench "readDecimalInt64_2" $ nf readDecimalInt64_2 number
+       , bench "readDecimalInt64_3" $ nf readDecimalInt64_3 number
        , bench "readDecimalInteger_" $ nf readDecimalInteger_ number
        , bench "readDecimalInteger_2" $ nf readDecimalInteger_2 number
        ]
