@@ -81,7 +81,7 @@ readSigned f xs
 -- digit groups.
 
 
--- | Read an unsigned\/positive integral value in ASCII decimal
+-- | Read an unsigned\/non-negative integral value in ASCII decimal
 -- format. Returns @Nothing@ if there is no integer at the beginning
 -- of the string, otherwise returns @Just@ the integer read and the
 -- remainder of the string.
@@ -129,33 +129,36 @@ readDecimal = start
               | otherwise -> (n,xs)
 
 
--- TODO: abstract out the test for (n0<0) so that we can inline it at use sites
-
--- Beware the overflow issues of 'numDigits', noted at bottom.
--- | Convert a positive integer into an (unsigned) ASCII decimal
+-- | Convert a non-negative integer into an (unsigned) ASCII decimal
 -- string. Returns @Nothing@ on negative inputs.
 packDecimal :: (Integral a) => a -> Maybe ByteString
-{-# SPECIALIZE packDecimal ::
-    Int     -> Maybe ByteString,
-    Int8    -> Maybe ByteString,
-    Int16   -> Maybe ByteString,
-    Int32   -> Maybe ByteString,
-    Int64   -> Maybe ByteString,
-    Integer -> Maybe ByteString,
-    Word    -> Maybe ByteString,
-    Word8   -> Maybe ByteString,
-    Word16  -> Maybe ByteString,
-    Word32  -> Maybe ByteString,
-    Word64  -> Maybe ByteString #-}
-packDecimal = start
+{-# INLINE packDecimal #-}
+packDecimal n
+    | n < 0     = Nothing
+    | otherwise = Just (unsafePackDecimal n)
+
+
+-- Beware the overflow issues of 'numDigits', noted at bottom.
+-- | Convert a non-negative integer into an (unsigned) ASCII decimal
+-- string. This function is unsafe to use on negative inputs.
+unsafePackDecimal :: (Integral a) => a -> ByteString
+{-# SPECIALIZE unsafePackDecimal ::
+    Int     -> ByteString,
+    Int8    -> ByteString,
+    Int16   -> ByteString,
+    Int32   -> ByteString,
+    Int64   -> ByteString,
+    Integer -> ByteString,
+    Word    -> ByteString,
+    Word8   -> ByteString,
+    Word16  -> ByteString,
+    Word32  -> ByteString,
+    Word64  -> ByteString #-}
+unsafePackDecimal n0 =
+    let size = numDigits 10 (toInteger n0)
+    in  BSI.unsafeCreate size $ \p0 ->
+            loop n0 (p0 `plusPtr` (size - 1))
     where
-    start n0
-        | n0 < 0    = Nothing
-        | otherwise = Just $
-            let size = numDigits 10 (toInteger n0)
-            in  BSI.unsafeCreate size $ \p0 ->
-                    loop n0 (p0 `plusPtr` (size - 1))
-    
     loop :: (Integral a) => a -> Ptr Word8 -> IO ()
     loop n p
         | n `seq` p `seq` False = undefined -- for strictness analysis
@@ -172,7 +175,7 @@ packDecimal = start
 ----------------------------------------------------------------
 ----- Hexadecimal
 
--- | Read a positive integral value in ASCII hexadecimal format.
+-- | Read a non-negative integral value in ASCII hexadecimal format.
 -- Returns @Nothing@ if there is no integer at the beginning of the
 -- string, otherwise returns @Just@ the integer read and the remainder
 -- of the string.
@@ -197,6 +200,10 @@ readHexadecimal :: (Integral a) => ByteString -> Maybe (a, ByteString)
     ByteString -> Maybe (Word64,  ByteString) #-}
 readHexadecimal = start
     where
+    -- TODO: Would it be worth trying to do the magichash trick
+    -- used by Warp here? It'd really help remove branch prediction
+    -- issues etc.
+    -- 
     -- Beware the urge to make this code prettier, cf 'readDecimal'.
     start xs
         | BS.null xs = Nothing
@@ -223,33 +230,36 @@ readHexadecimal = start
                     loop (n*16 + fromIntegral (w-0x61+10)) (BSU.unsafeTail xs)
               | otherwise -> (n,xs)
 
--- TODO: Would it be worth trying to do the magichash trick used by Warp here? It'd really help remove branch prediction issues etc.
 
-
--- | Convert a positive integer into a lower-case ASCII hexadecimal
+-- | Convert a non-negative integer into a lower-case ASCII hexadecimal
 -- string. Returns @Nothing@ on negative inputs.
 packHexadecimal :: (Integral a) => a -> Maybe ByteString
-{-# SPECIALIZE packHexadecimal ::
-    Int     -> Maybe ByteString,
-    Int8    -> Maybe ByteString,
-    Int16   -> Maybe ByteString,
-    Int32   -> Maybe ByteString,
-    Int64   -> Maybe ByteString,
-    Integer -> Maybe ByteString,
-    Word    -> Maybe ByteString,
-    Word8   -> Maybe ByteString,
-    Word16  -> Maybe ByteString,
-    Word32  -> Maybe ByteString,
-    Word64  -> Maybe ByteString #-}
-packHexadecimal = start
+{-# INLINE packHexadecimal #-}
+packHexadecimal n
+    | n < 0     = Nothing
+    | otherwise = Just (unsafePackHexadecimal n)
+
+
+-- | Convert a non-negative integer into a lower-case ASCII hexadecimal
+-- string. This function is unsafe to use on negative inputs.
+unsafePackHexadecimal :: (Integral a) => a -> ByteString
+{-# SPECIALIZE unsafePackHexadecimal ::
+    Int     -> ByteString,
+    Int8    -> ByteString,
+    Int16   -> ByteString,
+    Int32   -> ByteString,
+    Int64   -> ByteString,
+    Integer -> ByteString,
+    Word    -> ByteString,
+    Word8   -> ByteString,
+    Word16  -> ByteString,
+    Word32  -> ByteString,
+    Word64  -> ByteString #-}
+unsafePackHexadecimal n0 =
+    let size = twoPowerNumDigits 4 (toInteger n0) -- for Bits
+    in  BSI.unsafeCreate size $ \p0 ->
+            loop n0 (p0 `plusPtr` (size - 1))
     where
-    start n0
-        | n0 < 0    = Nothing
-        | otherwise = Just $
-            let size = twoPowerNumDigits 4 (toInteger n0) -- for Bits
-            in  BSI.unsafeCreate size $ \p0 ->
-                    loop n0 (p0 `plusPtr` (size - 1))
-    
     -- TODO: benchmark using @hexDigits@ vs using direct manipulations.
     loop :: (Integral a) => a -> Ptr Word8 -> IO ()
     loop n p
@@ -282,12 +292,14 @@ asHexadecimal = start
             poke   (p `plusPtr` 1) (BSU.unsafeIndex hexDigits  (ix .&. 0x0F))
             return (p `plusPtr` 2)
 
+
 -- TODO: benchmark against the magichash hack used in Warp.
 -- | The lower-case ASCII hexadecimal digits, in numerical order
 -- for use as a lookup table.
 hexDigits :: ByteString
 {-# NOINLINE hexDigits #-}
 hexDigits = BS8.pack "0123456789abcdef"
+
 
 -- | We can only do this for MonadIO not just any Monad, but that's
 -- good enough for what we need...
@@ -309,10 +321,10 @@ foldIO f z0 (BSI.PS fp off len) =
 ----------------------------------------------------------------
 ----- Octal
 
--- | Read a positive integral value in ASCII octal format. Returns
--- @Nothing@ if there is no integer at the beginning of the string,
--- otherwise returns @Just@ the integer read and the remainder of
--- the string.
+-- | Read a non-negative integral value in ASCII octal format.
+-- Returns @Nothing@ if there is no integer at the beginning of the
+-- string, otherwise returns @Just@ the integer read and the remainder
+-- of the string.
 --
 -- This function does not recognize the various octal sigils like
 -- \"0o\", but because there are different variants, those are best
@@ -351,30 +363,35 @@ readOctal = start
               | otherwise -> (n,xs)
 
 
--- | Convert a positive integer into an ASCII octal string. Returns
--- @Nothing@ on negative inputs.
+-- | Convert a non-negative integer into an ASCII octal string.
+-- Returns @Nothing@ on negative inputs.
 packOctal :: (Integral a) => a -> Maybe ByteString
-{-# SPECIALIZE packOctal ::
-    Int     -> Maybe ByteString,
-    Int8    -> Maybe ByteString,
-    Int16   -> Maybe ByteString,
-    Int32   -> Maybe ByteString,
-    Int64   -> Maybe ByteString,
-    Integer -> Maybe ByteString,
-    Word    -> Maybe ByteString,
-    Word8   -> Maybe ByteString,
-    Word16  -> Maybe ByteString,
-    Word32  -> Maybe ByteString,
-    Word64  -> Maybe ByteString #-}
-packOctal = start
+{-# INLINE packOctal #-}
+packOctal n
+    | n < 0     = Nothing
+    | otherwise = Just (unsafePackOctal n)
+
+
+-- | Convert a non-negative integer into an ASCII octal string.
+-- This function is unsafe to use on negative inputs.
+unsafePackOctal :: (Integral a) => a -> ByteString
+{-# SPECIALIZE unsafePackOctal ::
+    Int     -> ByteString,
+    Int8    -> ByteString,
+    Int16   -> ByteString,
+    Int32   -> ByteString,
+    Int64   -> ByteString,
+    Integer -> ByteString,
+    Word    -> ByteString,
+    Word8   -> ByteString,
+    Word16  -> ByteString,
+    Word32  -> ByteString,
+    Word64  -> ByteString #-}
+unsafePackOctal n0 =
+    let size = twoPowerNumDigits 3 (toInteger n0) -- for Bits
+    in  BSI.unsafeCreate size $ \p0 ->
+            loop n0 (p0 `plusPtr` (size - 1))
     where
-    start n0
-        | n0 < 0    = Nothing
-        | otherwise = Just $
-            let size = twoPowerNumDigits 3 (toInteger n0) -- for Bits
-            in  BSI.unsafeCreate size $ \p0 ->
-                    loop n0 (p0 `plusPtr` (size - 1))
-    
     loop :: (Integral a) => a -> Ptr Word8 -> IO ()
     loop n p
         | n <= 7    = do
