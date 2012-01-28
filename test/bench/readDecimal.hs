@@ -52,6 +52,10 @@ readDec s =
     (x,_):_ -> x
 
 
+-- Use ByteString's readInt function.
+readIntBS :: ByteString -> Int
+readIntBS = fst . fromMaybe (0,"") . BS8.readInt
+
 -- Use ByteString's readInteger function.
 readIntegerBS :: ByteString -> Integer
 readIntegerBS = fst . fromMaybe (0,"") . BS8.readInteger
@@ -342,6 +346,100 @@ readDecimalInt64_3 = fst . fromMaybe (0,"") . readDecimalIntegral_3
 
 readDecimalInteger_3 :: ByteString -> Integer
 readDecimalInteger_3 = fst . fromMaybe (0,"") . readDecimalIntegral_3
+
+
+-- A cleaned up version of readDecimalIntegral_3. N.B., this version
+-- doesn't guarantee prompt collection if the input string is
+-- exhausted; though presumably clients will check for nullity and
+-- discard empty strings themselves...
+readDecimalIntegral_3' :: Integral a => ByteString -> Maybe (a, ByteString)
+readDecimalIntegral_3' = start
+    where
+    isDecimal :: Word8 -> Bool
+    {-# INLINE isDecimal #-}
+    isDecimal w = 0x39 >= w && w >= 0x30
+    
+    toDigit :: Integral a => Word8 -> a
+    {-# INLINE toDigit #-}
+    toDigit w = fromIntegral (w - 0x30)
+    
+    addDigit :: Int -> Word8 -> Int
+    {-# INLINE addDigit #-}
+    addDigit n w = n * 10 + toDigit w
+    
+    start :: Integral a => ByteString -> Maybe (a, ByteString)
+    start xs
+        | BS.null xs = Nothing
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | isDecimal w -> Just $ loop0 (toDigit w) (BSU.unsafeTail xs)
+              | otherwise   -> Nothing
+    
+    loop0 :: Integral a => a -> ByteString -> (a, ByteString)
+    loop0 m xs
+        | m `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop1 m (toDigit w) (BSU.unsafeTail xs)
+        | otherwise = (m, xs)
+        where w = BSU.unsafeHead xs
+    
+    loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8
+        :: Integral a => a -> Int -> ByteString -> (a, ByteString)
+    loop1 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop2 m (addDigit n w) (BSU.unsafeTail xs)
+        | otherwise = (m*10 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+    loop2 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop3 m (addDigit n w) (BSU.unsafeTail xs)
+        | otherwise = (m*100 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+    loop3 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop4 m (addDigit n w) (BSU.unsafeTail xs)
+        | otherwise = (m*1000 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+    loop4 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop5 m (addDigit n w) (BSU.unsafeTail xs)
+        | otherwise = (m*10000 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+    loop5 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop6 m (addDigit n w) (BSU.unsafeTail xs)
+        | otherwise = (m*100000 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+    loop6 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop7 m (addDigit n w) (BSU.unsafeTail xs)
+        | otherwise = (m*1000000 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+    loop7 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop8 m (addDigit n w) (BSU.unsafeTail xs)
+        | otherwise = (m*10000000 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+    loop8 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop0 (m*1000000000 + fromIntegral (addDigit n w))
+                  (BSU.unsafeTail xs)
+        | otherwise = (m*100000000 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+
+readDecimalInt64_3' :: ByteString -> Int64
+readDecimalInt64_3' = fst . fromMaybe (0,"") . readDecimalIntegral_3'
+
+readDecimalInteger_3' :: ByteString -> Integer
+readDecimalInteger_3' = fst . fromMaybe (0,"") . readDecimalIntegral_3'
 
 ----------------------------------------------------------------
 -- Try to add a fast track that removes the null tests. Doesn't help; hurts a little.
@@ -737,6 +835,8 @@ runQuickCheckTests = do
     QC.quickCheck (prop_read_show_idempotent readDecimalInt64_2)
     putStrLn "Checking readDecimalInt64_3..."
     QC.quickCheck (prop_read_show_idempotent readDecimalInt64_3)
+    putStrLn "Checking readDecimalInt64_3'..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalInt64_3')
     putStrLn "Checking readDecimalInt64_4..."
     QC.quickCheck (prop_read_show_idempotent readDecimalInt64_4)
     putStrLn "Checking readDecimalInteger_..."
@@ -745,6 +845,8 @@ runQuickCheckTests = do
     QC.quickCheck (prop_read_show_idempotent readDecimalInteger_2)
     putStrLn "Checking readDecimalInteger_3..."
     QC.quickCheck (prop_read_show_idempotent readDecimalInteger_3)
+    putStrLn "Checking readDecimalInteger_3'..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalInteger_3')
     putStrLn "Checking readDecimalInteger_5..."
     QC.quickCheck (prop_read_show_idempotent readDecimalInteger_5)
 
@@ -752,30 +854,31 @@ runQuickCheckTests = do
 runCriterionTests :: ByteString -> IO ()
 runCriterionTests number =
     defaultMain
+        {-
         [ bgroup "naive"
             [ bench "readIntOrig"       $ nf readIntOrig number
             , bench "readDec"           $ nf readDec number
+            , bench "readIntBS"         $ nf readIntBS number
             , bench "readIntegerBS"     $ nf readIntegerBS number
             , bench "readRaw"           $ nf readIntRaw number
             ]
-        , bgroup "readIntTC"
+        -}
+        [ bgroup "readIntTC"
             [ bench "readInt"           $ nf readInt number
             , bench "readInt64"         $ nf readInt64 number
             , bench "readInteger"       $ nf readInteger number
             ]
-        , bgroup "readIntegralMH"
+        , bgroup "readIntegralMH (buggy)"
             [ bench "readIntMH"         $ nf readIntMH number
             , bench "readInt64MH"       $ nf readInt64MH number
             , bench "readIntegerMH"     $ nf readIntegerMH number
             ]
         , bgroup "readIntegralMHFast"
-            [ bench "readIntMHFast"     $ nf readIntMHFast number
-            , bench "readInt64MHFast"   $ nf readInt64MHFast number
-            , bench "readIntegerMHFast" $ nf readIntegerMHFast number
-            ]
-        , bgroup "readIntegralMHFast'"
-            [ bench "readIntMHFast'"     $ nf readIntMHFast' number
-            , bench "readInt64MHFast'"   $ nf readInt64MHFast' number
+            [ bench "readIntMHFast"      $ nf readIntMHFast      number
+            , bench "readIntMHFast'"     $ nf readIntMHFast'     number
+            , bench "readInt64MHFast"    $ nf readInt64MHFast    number
+            , bench "readInt64MHFast'"   $ nf readInt64MHFast'   number
+            , bench "readIntegerMHFast"  $ nf readIntegerMHFast  number
             , bench "readIntegerMHFast'" $ nf readIntegerMHFast' number
             ]
         ---- , bench "readIntWarp"   $ nf readIntWarp number
@@ -789,10 +892,12 @@ runCriterionTests number =
             , bench "readDecimalInteger_2" $ nf readDecimalInteger_2 number
             ]
         , bgroup "readDecimal (unrolled)"
-            [ bench "readDecimalInt64_3"   $ nf readDecimalInt64_3 number
-            , bench "readDecimalInteger_3" $ nf readDecimalInteger_3 number
-            , bench "readDecimalInt64_4"   $ nf readDecimalInt64_4 number
-            , bench "readDecimalInteger_5" $ nf readDecimalInteger_5 number
+            [ bench "readDecimalInt64_3"    $ nf readDecimalInt64_3    number
+            , bench "readDecimalInt64_3'"   $ nf readDecimalInt64_3'   number
+            , bench "readDecimalInt64_4"    $ nf readDecimalInt64_4    number
+            , bench "readDecimalInteger_3"  $ nf readDecimalInteger_3  number
+            , bench "readDecimalInteger_3'" $ nf readDecimalInteger_3' number
+            , bench "readDecimalInteger_5"  $ nf readDecimalInteger_5  number
             ]
         ]
 
