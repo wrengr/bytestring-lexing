@@ -1,13 +1,14 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
+{-# LANGUAGE CPP #-}
 ----------------------------------------------------------------
---                                                    2012.01.26
+--                                                    2012.01.27
 -- |
 -- Module      :  Data.ByteString.Lex.Integral
 -- Copyright   :  Copyright (c) 2010--2012 wren ng thornton
 -- License     :  BSD3
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  provisional
--- Portability :  Haskell98
+-- Portability :  Haskell98 + CPP
 --
 -- Functions for parsing and producing 'Integral' values from\/to
 -- 'ByteString's based on the \"Char8\" encoding. That is, we assume
@@ -19,7 +20,7 @@ module Data.ByteString.Lex.Integral
       readSigned
     -- , packSigned
     -- * Decimal conversions
-    , readDecimal
+    , ReadDecimal(..)
     , packDecimal
     -- TODO: asDecimal -- this will be really hard to make efficient...
     -- * Hexadecimal conversions
@@ -43,6 +44,14 @@ import           Data.Bits
 import           Foreign.Ptr              (Ptr, plusPtr)
 import qualified Foreign.ForeignPtr       as FFI (withForeignPtr)
 import           Foreign.Storable         (peek, poke)
+
+-- Gotta have GHC's include dir on the path.
+#ifdef __GLASGOW_HASKELL__
+#include "MachDeps.h"
+#else
+-- Hackery. We need to find a better way to handle non-GHC...
+#define WORD_SIZE_IN_BITS == 32
+#endif
 
 ----------------------------------------------------------------
 ----- General
@@ -73,40 +82,76 @@ readSigned f xs
 ----------------------------------------------------------------
 ----- Decimal
 
--- TODO: try a version which only performs fromIntegral after a
--- group of digits instead of after each one, in order to reduce
--- the scaling overhead. This would be especially important for
--- Integer and (on 32-bit machines) Int64. Maybe typeclass-ify
--- readDecimal in order to dynamically choose the optimal size of
--- digit groups. E.g., the largest group that's safe to parse without
--- possibility of overflow is 2 for Int8, 4 for Int16, 9 for Int32,
--- 18 for Int64.
-
-
 -- | Read an unsigned\/non-negative integral value in ASCII decimal
 -- format. Returns @Nothing@ if there is no integer at the beginning
 -- of the string, otherwise returns @Just@ the integer read and the
--- remainder of the string.
+-- remainder of the string. This is presented as a type class because the optimal algorithm differs depending on how the target type compares to the native word size.
 --
 -- If you are extremely concerned with performance, then it is more
 -- performant to use this function at @Int@ or @Word@ and then to
 -- call 'fromIntegral' to perform the conversion at the end. However,
 -- doing this will make your code succeptible to overflow bugs if
 -- the target type is larger than @Int@.
-readDecimal :: (Integral a) => ByteString -> Maybe (a, ByteString)
-{-# SPECIALIZE readDecimal ::
-    ByteString -> Maybe (Int,     ByteString),
-    ByteString -> Maybe (Int8,    ByteString),
-    ByteString -> Maybe (Int16,   ByteString),
-    ByteString -> Maybe (Int32,   ByteString),
-    ByteString -> Maybe (Int64,   ByteString),
-    ByteString -> Maybe (Integer, ByteString),
-    ByteString -> Maybe (Word,    ByteString),
-    ByteString -> Maybe (Word8,   ByteString),
-    ByteString -> Maybe (Word16,  ByteString),
-    ByteString -> Maybe (Word32,  ByteString),
-    ByteString -> Maybe (Word64,  ByteString) #-}
-readDecimal = start
+class (Integral a) => ReadDecimal a where
+    readDecimal :: ByteString -> Maybe (a, ByteString)
+
+cast :: (Integral a, Num b) => Maybe (a, ByteString) -> Maybe (b, ByteString)
+{-# INLINE cast #-}
+cast (Just (n,xs)) = Just (fromIntegral n, xs)
+cast Nothing       = Nothing
+
+instance ReadDecimal Int8 where
+    readDecimal = cast . (readDecimal :: ByteString -> Maybe (Int,ByteString))
+
+instance ReadDecimal Int16 where
+    readDecimal = cast . (readDecimal :: ByteString -> Maybe (Int,ByteString))
+
+instance ReadDecimal Int32 where
+#if WORD_SIZE_IN_BITS <= 32
+    readDecimal = readDecimalSimple
+#else
+    readDecimal = cast . (readDecimal :: ByteString -> Maybe (Int,ByteString))
+#endif
+
+instance ReadDecimal Int where
+    readDecimal = readDecimalSimple
+
+instance ReadDecimal Int64 where
+#if WORD_SIZE_IN_BITS <= 32
+    readDecimal = readDecimalUnrolled
+#else
+    readDecimal = cast . (readDecimal :: ByteString -> Maybe (Int,ByteString))
+#endif
+
+instance ReadDecimal Integer where
+    readDecimal = readDecimalUnrolled
+
+instance ReadDecimal Word8 where
+    readDecimal = cast . (readDecimal :: ByteString -> Maybe (Word,ByteString))
+
+instance ReadDecimal Word16 where
+    readDecimal = cast . (readDecimal :: ByteString -> Maybe (Word,ByteString))
+
+instance ReadDecimal Word32 where
+#if WORD_SIZE_IN_BITS <= 32
+    readDecimal = readDecimalSimple
+#else
+    readDecimal = cast . (readDecimal :: ByteString -> Maybe (Word,ByteString))
+#endif
+
+instance ReadDecimal Word where
+    readDecimal = readDecimalSimple
+
+instance ReadDecimal Word64 where
+#if WORD_SIZE_IN_BITS <= 32
+    readDecimal = readDecimalUnrolled
+#else
+    readDecimal = cast . (readDecimal :: ByteString -> Maybe (Word,ByteString))
+#endif
+
+
+readDecimalSimple :: (Integral a) => ByteString -> Maybe (a, ByteString)
+readDecimalSimple = start
     where
     -- This implementation is near verbatim from
     -- bytestring-0.9.1.7:Data.ByteString.Char8.readInt. We do
@@ -132,6 +177,90 @@ readDecimal = start
               | otherwise -> (n,xs)
 
 
+readDecimalUnrolled :: Integral a => ByteString -> Maybe (a, ByteString)
+readDecimalUnrolled = start
+    where
+    isDecimal :: Word8 -> Bool
+    {-# INLINE isDecimal #-}
+    isDecimal w = 0x39 >= w && w >= 0x30
+    
+    toDigit :: Integral a => Word8 -> a
+    {-# INLINE toDigit #-}
+    toDigit w = fromIntegral (w - 0x30)
+    
+    addDigit :: Int -> Word8 -> Int
+    {-# INLINE addDigit #-}
+    addDigit n w = n * 10 + toDigit w
+    
+    start :: Integral a => ByteString -> Maybe (a, ByteString)
+    start xs
+        | BS.null xs = Nothing
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | isDecimal w -> Just $ loop0 (toDigit w) (BSU.unsafeTail xs)
+              | otherwise   -> Nothing
+    
+    loop0 :: Integral a => a -> ByteString -> (a, ByteString)
+    loop0 m xs
+        | m `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop1 m (toDigit w) (BSU.unsafeTail xs)
+        | otherwise = (m, xs)
+        where w = BSU.unsafeHead xs
+    
+    loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8
+        :: Integral a => a -> Int -> ByteString -> (a, ByteString)
+    loop1 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop2 m (addDigit n w) (BSU.unsafeTail xs)
+        | otherwise = (m*10 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+    loop2 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop3 m (addDigit n w) (BSU.unsafeTail xs)
+        | otherwise = (m*100 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+    loop3 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop4 m (addDigit n w) (BSU.unsafeTail xs)
+        | otherwise = (m*1000 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+    loop4 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop5 m (addDigit n w) (BSU.unsafeTail xs)
+        | otherwise = (m*10000 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+    loop5 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop6 m (addDigit n w) (BSU.unsafeTail xs)
+        | otherwise = (m*100000 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+    loop6 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop7 m (addDigit n w) (BSU.unsafeTail xs)
+        | otherwise = (m*1000000 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+    loop7 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop8 m (addDigit n w) (BSU.unsafeTail xs)
+        | otherwise = (m*10000000 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+    loop8 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | not (BS.null xs) && isDecimal w =
+            loop0 (m*1000000000 + fromIntegral (addDigit n w))
+                  (BSU.unsafeTail xs)
+        | otherwise = (m*100000000 + fromIntegral n, xs)
+        where w = BSU.unsafeHead xs
+
+----------------------------------------------------------------
 -- | Convert a non-negative integer into an (unsigned) ASCII decimal
 -- string. Returns @Nothing@ on negative inputs.
 packDecimal :: (Integral a) => a -> Maybe ByteString
@@ -175,6 +304,7 @@ unsafePackDecimal n0 =
             loop q (p `plusPtr` negate 1)
 
 
+----------------------------------------------------------------
 ----------------------------------------------------------------
 ----- Hexadecimal
 
@@ -322,6 +452,7 @@ foldIO f z0 (BSI.PS fp off len) =
 
 
 ----------------------------------------------------------------
+----------------------------------------------------------------
 ----- Octal
 
 -- | Read a non-negative integral value in ASCII octal format.
@@ -432,7 +563,7 @@ asOctal buf =
             {- N.B., @BSU.unsafeIndex octDigits == (0x30 +)@ -}
 -}
 
-
+----------------------------------------------------------------
 ----------------------------------------------------------------
 ----- Integral logarithms
 

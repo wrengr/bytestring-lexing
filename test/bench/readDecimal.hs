@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE OverloadedStrings, MagicHash, BangPatterns #-}
 ----------------------------------------------------------------
---                                                    2012.01.26
+--                                                    2012.01.27
 -- |
 -- Copyright     : Erik de Castro Lopo <erikd@mega-nerd.com>
 -- License       : BSD3
@@ -230,20 +230,50 @@ readIntegerMHFast' = readIntegralMHFast'
 ----readIntWarp s = fromIntegral $ RI.readInt64 s
 
 ----------------------------------------------------------------
-readDecimalInt_      :: ByteString -> Int
-readDecimalInt_      = fst . fromMaybe (0,"") . BSLex.readDecimal
+readDecimalOrig :: (Integral a) => ByteString -> Maybe (a, ByteString)
+{-# SPECIALIZE readDecimalOrig ::
+    ByteString -> Maybe (Int,     ByteString),
+    ByteString -> Maybe (Int64,   ByteString),
+    ByteString -> Maybe (Integer, ByteString) #-}
+readDecimalOrig = start
+    where
+    -- This implementation is near verbatim from
+    -- bytestring-0.9.1.7:Data.ByteString.Char8.readInt. We do
+    -- remove the superstrictness by lifting the 'Just' so it can
+    -- be returned after seeing the first byte. Do beware of the
+    -- scope of 'fromIntegral', we want to avoid unnecessary
+    -- 'Integral' operations and do as much as possible in 'Word8'.
+    start xs
+        | BS.null xs = Nothing
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    Just $ loop (fromIntegral (w - 0x30)) (BSU.unsafeTail xs)
+              | otherwise -> Nothing
+    
+    loop n xs
+        | n `seq` xs `seq` False = undefined -- for strictness analysis
+        | BS.null xs = (n, BS.empty)         -- not @xs@, to help GC
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | 0x39 >= w && w >= 0x30 ->
+                    loop (n * 10 + fromIntegral (w - 0x30)) (BSU.unsafeTail xs)
+              | otherwise -> (n,xs)
 
-readDecimalInt64_    :: ByteString -> Int64
-readDecimalInt64_    = fst . fromMaybe (0,"") . BSLex.readDecimal
+readDecimalOrigInt_      :: ByteString -> Int
+readDecimalOrigInt_      = fst . fromMaybe (0,"") . readDecimalOrig
 
-readDecimalInt64_2   :: ByteString -> Int64
-readDecimalInt64_2   = fromIntegral . readDecimalInt_
+readDecimalOrigInt64_    :: ByteString -> Int64
+readDecimalOrigInt64_    = fst . fromMaybe (0,"") . readDecimalOrig
 
-readDecimalInteger_  :: ByteString -> Integer
-readDecimalInteger_  = fst . fromMaybe (0,"") . BSLex.readDecimal
+readDecimalOrigInt64_2   :: ByteString -> Int64
+readDecimalOrigInt64_2   = fromIntegral . readDecimalOrigInt_
 
-readDecimalInteger_2 :: ByteString -> Integer
-readDecimalInteger_2 = fromIntegral . readDecimalInt_
+readDecimalOrigInteger_  :: ByteString -> Integer
+readDecimalOrigInteger_  = fst . fromMaybe (0,"") . readDecimalOrig
+
+readDecimalOrigInteger_2 :: ByteString -> Integer
+readDecimalOrigInteger_2 = fromIntegral . readDecimalOrigInt_
 
 
 ----------------------------------------------------------------
@@ -341,6 +371,9 @@ readDecimalIntegral_3 = start
                     loop0 (m*1000000000 + fromIntegral (n*10 + fromIntegral(w-0x30))) (BSU.unsafeTail xs)
               | otherwise -> (m*100000000 + fromIntegral n, xs)
 
+readDecimalInt_3 :: ByteString -> Int
+readDecimalInt_3 = fst . fromMaybe (0,"") . readDecimalIntegral_3
+
 readDecimalInt64_3 :: ByteString -> Int64
 readDecimalInt64_3 = fst . fromMaybe (0,"") . readDecimalIntegral_3
 
@@ -434,6 +467,9 @@ readDecimalIntegral_3' = start
                   (BSU.unsafeTail xs)
         | otherwise = (m*100000000 + fromIntegral n, xs)
         where w = BSU.unsafeHead xs
+
+readDecimalInt_3' :: ByteString -> Int
+readDecimalInt_3' = fst . fromMaybe (0,"") . readDecimalIntegral_3'
 
 readDecimalInt64_3' :: ByteString -> Int64
 readDecimalInt64_3' = fst . fromMaybe (0,"") . readDecimalIntegral_3'
@@ -780,6 +816,18 @@ readDecimalInteger_5 = fst . fromMaybe (0,"") . start
                         (o*10000000000000000000 + fromIntegral
                         (m*100000000), xs)
 
+
+----------------------------------------------------------------
+-- The versions currently used by the library
+readDecimalInt      :: ByteString -> Int
+readDecimalInt      = fst . fromMaybe (0,"") . BSLex.readDecimal
+
+readDecimalInt64    :: ByteString -> Int64
+readDecimalInt64    = fst . fromMaybe (0,"") . BSLex.readDecimal
+
+readDecimalInteger  :: ByteString -> Integer
+readDecimalInteger  = fst . fromMaybe (0,"") . BSLex.readDecimal
+
 ----------------------------------------------------------------
 ----------------------------------------------------------------
 -- A QuickCheck property. Test that for a number >= 0, converting it to
@@ -796,108 +844,105 @@ prop_read_show_idempotent freader x =
 
 runQuickCheckTests :: IO ()
 runQuickCheckTests = do
-    putStrLn "Checking readInt..."
+    putStrLn "Checking readIntTC..."
     QC.quickCheck (prop_read_show_idempotent readInt)
-    putStrLn "Checking readInt64..."
     QC.quickCheck (prop_read_show_idempotent readInt64)
-    putStrLn "Checking readInteger..."
     QC.quickCheck (prop_read_show_idempotent readInteger)
     --
-    putStrLn "Checking readIntMH..."
+    putStrLn "Checking readIntegralMH..."
     QC.quickCheck (prop_read_show_idempotent readIntMH)
-    putStrLn "Checking readInt64MH..."
     QC.quickCheck (prop_read_show_idempotent readInt64MH)
-    putStrLn "Checking readIntegerMH..."
     QC.quickCheck (prop_read_show_idempotent readIntegerMH)
     --
-    putStrLn "Checking readIntMHFast..."
+    putStrLn "Checking readIntegralMHFast..."
     QC.quickCheck (prop_read_show_idempotent readIntMHFast)
-    putStrLn "Checking readInt64MHFast..."
-    QC.quickCheck (prop_read_show_idempotent readInt64MHFast)
-    putStrLn "Checking readIntegerMHFast..."
-    QC.quickCheck (prop_read_show_idempotent readIntegerMHFast)
-    --
-    putStrLn "Checking readIntMHFast'..."
     QC.quickCheck (prop_read_show_idempotent readIntMHFast')
-    putStrLn "Checking readInt64MHFast'..."
+    QC.quickCheck (prop_read_show_idempotent readInt64MHFast)
     QC.quickCheck (prop_read_show_idempotent readInt64MHFast')
-    putStrLn "Checking readIntegerMHFast'..."
+    QC.quickCheck (prop_read_show_idempotent readIntegerMHFast)
     QC.quickCheck (prop_read_show_idempotent readIntegerMHFast')
     --
     ----putStrLn "Checking readIntWarp..."
     ----QC.quickCheck (prop_read_show_idempotent readIntWarp)
     --
-    putStrLn "Checking readDecimalInt_..."
-    QC.quickCheck (prop_read_show_idempotent readDecimalInt_)
-    putStrLn "Checking readDecimalInt64_..."
-    QC.quickCheck (prop_read_show_idempotent readDecimalInt64_)
-    putStrLn "Checking readDecimalInt64_2..."
-    QC.quickCheck (prop_read_show_idempotent readDecimalInt64_2)
-    putStrLn "Checking readDecimalInt64_3..."
+    putStrLn "Checking readDecimalOrig (correct)..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalOrigInt_)
+    QC.quickCheck (prop_read_show_idempotent readDecimalOrigInt64_)
+    QC.quickCheck (prop_read_show_idempotent readDecimalOrigInteger_)
+    putStrLn "Checking readDecimalOrig (buggy fast)..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalOrigInt64_2)
+    QC.quickCheck (prop_read_show_idempotent readDecimalOrigInteger_2)
+    putStrLn "Checking readDecimalIntegral_3..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalInt_3)
+    QC.quickCheck (prop_read_show_idempotent readDecimalInt_3')
     QC.quickCheck (prop_read_show_idempotent readDecimalInt64_3)
-    putStrLn "Checking readDecimalInt64_3'..."
     QC.quickCheck (prop_read_show_idempotent readDecimalInt64_3')
+    QC.quickCheck (prop_read_show_idempotent readDecimalInteger_3)
+    QC.quickCheck (prop_read_show_idempotent readDecimalInteger_3')
     putStrLn "Checking readDecimalInt64_4..."
     QC.quickCheck (prop_read_show_idempotent readDecimalInt64_4)
-    putStrLn "Checking readDecimalInteger_..."
-    QC.quickCheck (prop_read_show_idempotent readDecimalInteger_)
-    putStrLn "Checking readDecimalInteger_2..."
-    QC.quickCheck (prop_read_show_idempotent readDecimalInteger_2)
-    putStrLn "Checking readDecimalInteger_3..."
-    QC.quickCheck (prop_read_show_idempotent readDecimalInteger_3)
-    putStrLn "Checking readDecimalInteger_3'..."
-    QC.quickCheck (prop_read_show_idempotent readDecimalInteger_3')
     putStrLn "Checking readDecimalInteger_5..."
     QC.quickCheck (prop_read_show_idempotent readDecimalInteger_5)
+    putStrLn "Checking readDecimal (current)..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalInt)
+    QC.quickCheck (prop_read_show_idempotent readDecimalInt64)
+    QC.quickCheck (prop_read_show_idempotent readDecimalInteger)
 
 
 runCriterionTests :: ByteString -> IO ()
-runCriterionTests number =
+runCriterionTests n =
     defaultMain
         {-
         [ bgroup "naive"
-            [ bench "readIntOrig"       $ nf readIntOrig number
-            , bench "readDec"           $ nf readDec number
-            , bench "readIntBS"         $ nf readIntBS number
-            , bench "readIntegerBS"     $ nf readIntegerBS number
-            , bench "readRaw"           $ nf readIntRaw number
+            [ bench "readIntOrig"       $ nf readIntOrig n
+            , bench "readDec"           $ nf readDec n
+            , bench "readIntBS"         $ nf readIntBS n
+            , bench "readIntegerBS"     $ nf readIntegerBS n
+            , bench "readRaw"           $ nf readIntRaw n
             ]
         -}
         [ bgroup "readIntTC"
-            [ bench "readInt"           $ nf readInt number
-            , bench "readInt64"         $ nf readInt64 number
-            , bench "readInteger"       $ nf readInteger number
+            [ bench "readInt"           $ nf readInt n
+            , bench "readInt64"         $ nf readInt64 n
+            , bench "readInteger"       $ nf readInteger n
             ]
         , bgroup "readIntegralMH (buggy)"
-            [ bench "readIntMH"         $ nf readIntMH number
-            , bench "readInt64MH"       $ nf readInt64MH number
-            , bench "readIntegerMH"     $ nf readIntegerMH number
+            [ bench "readIntMH"         $ nf readIntMH n
+            , bench "readInt64MH"       $ nf readInt64MH n
+            , bench "readIntegerMH"     $ nf readIntegerMH n
             ]
         , bgroup "readIntegralMHFast"
-            [ bench "readIntMHFast"      $ nf readIntMHFast      number
-            , bench "readIntMHFast'"     $ nf readIntMHFast'     number
-            , bench "readInt64MHFast"    $ nf readInt64MHFast    number
-            , bench "readInt64MHFast'"   $ nf readInt64MHFast'   number
-            , bench "readIntegerMHFast"  $ nf readIntegerMHFast  number
-            , bench "readIntegerMHFast'" $ nf readIntegerMHFast' number
+            [ bench "readIntMHFast"      $ nf readIntMHFast      n
+            , bench "readIntMHFast'"     $ nf readIntMHFast'     n
+            , bench "readInt64MHFast"    $ nf readInt64MHFast    n
+            , bench "readInt64MHFast'"   $ nf readInt64MHFast'   n
+            , bench "readIntegerMHFast"  $ nf readIntegerMHFast  n
+            , bench "readIntegerMHFast'" $ nf readIntegerMHFast' n
             ]
-        ---- , bench "readIntWarp"   $ nf readIntWarp number
-        , bgroup "readDecimal (correct)"
-            [ bench "readDecimalInt_"      $ nf readDecimalInt_ number
-            , bench "readDecimalInt64_"    $ nf readDecimalInt64_ number
-            , bench "readDecimalInteger_"  $ nf readDecimalInteger_ number
+        ---- , bench "readIntWarp"   $ nf readIntWarp n
+        , bgroup "readDecimalOrig (correct)"
+            [ bench "readDecimalOrigInt_"      $ nf readDecimalOrigInt_ n
+            , bench "readDecimalOrigInt64_"    $ nf readDecimalOrigInt64_ n
+            , bench "readDecimalOrigInteger_"  $ nf readDecimalOrigInteger_ n
             ]
-        , bgroup "readDecimal (buggy fast)"
-            [ bench "readDecimalInt64_2"   $ nf readDecimalInt64_2 number
-            , bench "readDecimalInteger_2" $ nf readDecimalInteger_2 number
+        , bgroup "readDecimalOrig (buggy fast)"
+            [ bench "readDecimalOrigInt64_2"   $ nf readDecimalOrigInt64_2 n
+            , bench "readDecimalOrigInteger_2" $ nf readDecimalOrigInteger_2 n
             ]
         , bgroup "readDecimal (unrolled)"
-            [ bench "readDecimalInt64_3"    $ nf readDecimalInt64_3    number
-            , bench "readDecimalInt64_3'"   $ nf readDecimalInt64_3'   number
-            , bench "readDecimalInt64_4"    $ nf readDecimalInt64_4    number
-            , bench "readDecimalInteger_3"  $ nf readDecimalInteger_3  number
-            , bench "readDecimalInteger_3'" $ nf readDecimalInteger_3' number
-            , bench "readDecimalInteger_5"  $ nf readDecimalInteger_5  number
+            [ bench "readDecimalInt_3"      $ nf readDecimalInt_3      n
+            , bench "readDecimalInt_3'"     $ nf readDecimalInt_3'     n
+            , bench "readDecimalInt64_3"    $ nf readDecimalInt64_3    n
+            , bench "readDecimalInt64_3'"   $ nf readDecimalInt64_3'   n
+            , bench "readDecimalInt64_4"    $ nf readDecimalInt64_4    n
+            , bench "readDecimalInteger_3"  $ nf readDecimalInteger_3  n
+            , bench "readDecimalInteger_3'" $ nf readDecimalInteger_3' n
+            , bench "readDecimalInteger_5"  $ nf readDecimalInteger_5  n
+            ]
+        , bgroup "readDecimal (current)"
+            [ bench "readDecimalInt"     $ nf readDecimalInt     n
+            , bench "readDecimalInt64"   $ nf readDecimalInt64   n
+            , bench "readDecimalInteger" $ nf readDecimalInteger n
             ]
         ]
 
