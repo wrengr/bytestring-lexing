@@ -3,17 +3,20 @@
 ----------------------------------------------------------------
 --                                                    2012.01.27
 -- |
--- Copyright     : Erik de Castro Lopo <erikd@mega-nerd.com>
--- License       : BSD3
+-- Module      :  BenchReadDecimal
+-- Copyright   :  Copyright (c) 2010--2012 wren ng thornton,
+--                              2012 Erik de Castro Lopo <erikd@mega-nerd.com>
+-- License     :  BSD3
+-- Maintainer  :  wren@community.haskell.org
+-- Stability   :  benchmark
+-- Portability :  portable
 --
 -- Originally a program to QuickCheck and benchmark a function used
 -- in the Warp web server and elsewhere to read the Content-Length
 -- field of HTTP headers. This version modified for testing the
 -- local package.
---
--- Compile and run as:
---    @ghc -O2 --make readDecimal.hs -o readDecimal && ./readDecimal@
 ----------------------------------------------------------------
+module BenchReadDecimal (main) where
 
 import Criterion.Main
 import Data.ByteString (ByteString)

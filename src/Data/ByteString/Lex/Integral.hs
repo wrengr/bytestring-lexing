@@ -273,8 +273,8 @@ unsafePackDecimal n0 =
 -- This function does not recognize the various hexadecimal sigils
 -- like \"0x\", but because there are so many different variants,
 -- those are best handled by helper functions which then use this
--- one for the numerical parsing. This function recognizes both
--- upper-case, lower-case, and mixed-case hexadecimal.
+-- function for the actual numerical parsing. This function recognizes
+-- both upper-case, lower-case, and mixed-case hexadecimal.
 readHexadecimal :: (Integral a) => ByteString -> Maybe (a, ByteString)
 {-# SPECIALIZE readHexadecimal ::
     ByteString -> Maybe (Int,     ByteString),
@@ -419,8 +419,8 @@ foldIO f z0 (BSI.PS fp off len) =
 --
 -- This function does not recognize the various octal sigils like
 -- \"0o\", but because there are different variants, those are best
--- handled by helper functions which then use this one for the
--- numerical parsing.
+-- handled by helper functions which then use this function for the
+-- actual numerical parsing.
 readOctal :: (Integral a) => ByteString -> Maybe (a, ByteString)
 {-# SPECIALIZE readOctal ::
     ByteString -> Maybe (Int,     ByteString),

@@ -1,0 +1,114 @@
+----------------------------------------------------------------
+-- wren ng thornton <wren@community.haskell.org>    ~ 2012.01.27
+----------------------------------------------------------------
+
+Name:           bytestring-lexing-bench
+Version:        0.6.4
+Cabal-Version:  >= 1.2
+Build-Type:     Simple
+Stability:      debugging
+Copyright:      Copyright (c) 2010--2012 wren ng thornton
+License:        BSD3
+License-File:   ../../LICENSE
+Author:         wren ng thornton
+Maintainer:     wren@community.haskell.org
+Homepage:       http://code.haskell.org/~wren/
+Category:       Data
+Synopsis:       Microbenchmarking for common functions.
+Description:    Microbenchmarking for common functions.
+
+-- To run all the benchmarks with criterion>=0.6 do:
+-- for b in isSpace numDigits packDecimal readDecimal ; do
+--     ./dist/build/bench-${b}/bench-${b} -o ${b}.html ; done && open *.html
+
+----------------------------------------------------------------
+Flag base4
+    Default:     True
+    Description: base-4.0 emits "Prelude deprecated" messages in
+                 order to get people to be explicit about which
+                 version of base they use.
+Flag splitBase
+    Default:     True
+    Description: base-3.0 (GHC 6.8) broke out the packages: array,
+                 bytestring, containers, directory, old-locale,
+                 old-time, packedstring, pretty, process, random.
+Flag bytestringInBase
+    Default:     False
+    Description: The bytestring library was included in base-2.0
+                 and base-2.1.1, but for base-1.0 and base-3.0 it
+                 was a separate package.
+Flag applicativeInBase
+    Default:     True
+    Description: Applicative functors were added in base-2.0.
+
+----------------------------------------------------------------
+-- | Benchmark different implementations of the @isSpace@ predicate.
+-- This benchmark shows a performance problem in
+-- attoparsec-0.8.1.0:Data.Attoparsec.Char8.isSpace, and the improved
+-- definition is included in attoparsec-0.8.2.0
+Executable bench-isSpace
+    Main-Is:        BenchIsSpace.hs
+    GHC-Options:    -main-is BenchIsSpace.main
+    Build-Depends:  criterion >= 0.5.0
+    
+    if flag(base4)
+        Build-Depends: base >= 4 && < 5
+    else
+        Build-Depends: base < 4
+    
+    if flag(bytestringInBase)
+        Build-Depends: base >= 2.0 && < 2.2
+    else
+        Build-Depends: base < 2.0 || >= 3, bytestring
+
+----------------------------------------------------------------
+-- | Benchmark different implementations of the @numDigits@ function.
+Executable bench-numDigits
+    Main-Is:        BenchNumDigits.hs
+    GHC-Options:    -main-is BenchNumDigits.main
+    Build-Depends:  criterion >= 0.5.0
+    
+    if flag(base4)
+        Build-Depends: base >= 4 && < 5
+    else
+        Build-Depends: base < 4
+
+----------------------------------------------------------------
+-- | Benchmark different implementations of the @readDecimal@ function.
+Executable bench-readDecimal
+    Main-Is:        BenchReadDecimal.hs
+    GHC-Options:    -main-is BenchReadDecimal.main
+    Build-Depends:  criterion         >= 0.5.0
+                 ,  bytestring-lexing >= 0.3.0
+                 ,  ghc-prim          >= 0.2.0
+                 ,  QuickCheck        >= 2.4.1
+    
+    if flag(base4)
+        Build-Depends: base >= 4 && < 5
+    else
+        Build-Depends: base < 4
+    
+    if flag(bytestringInBase)
+        Build-Depends: base >= 2.0 && < 2.2
+    else
+        Build-Depends: base < 2.0 || >= 3, bytestring
+
+----------------------------------------------------------------
+-- | Benchmark different implementations of the @packDecimal@ function.
+Executable bench-packDecimal
+    Main-Is:        BenchPackDecimal.hs
+    GHC-Options:    -main-is BenchPackDecimal.main
+    Build-Depends:  criterion >= 0.5.0
+    
+    if flag(base4)
+        Build-Depends: base >= 4 && < 5
+    else
+        Build-Depends: base < 4
+    
+    if flag(bytestringInBase)
+        Build-Depends: base >= 2.0 && < 2.2
+    else
+        Build-Depends: base < 2.0 || >= 3, bytestring
+
+----------------------------------------------------------------
+----------------------------------------------------------- fin.
