@@ -5,5 +5,9 @@ and released under the terms in the LICENSE file. In January 2012
 maintainership was taken over by wren ng thornton. I would also
 like to give thanks to the following contributers:
 
-Erik de Castro Lopo, and Christoph Breitkopf --- for excessive
-    tweaking and benchmarking of the readDecimal function.
+Bryan O'Sullivan --- For adding support for parsing Doubles from
+    lazy bytestrings back during Don's maintainership.
+
+Erik de Castro Lopo, Vincent Hanquez, and Christoph Breitkopf ---
+    for excessive tweaking and benchmarking of the readDecimal
+    function.

@@ -895,7 +895,6 @@ runQuickCheckTests = do
 runCriterionTests :: ByteString -> IO ()
 runCriterionTests n =
     defaultMain
-        {-
         [ bgroup "naive"
             [ bench "readIntOrig"       $ nf readIntOrig n
             , bench "readDec"           $ nf readDec n
@@ -903,8 +902,7 @@ runCriterionTests n =
             , bench "readIntegerBS"     $ nf readIntegerBS n
             , bench "readRaw"           $ nf readIntRaw n
             ]
-        -}
-        [ bgroup "readIntTC"
+        , bgroup "readIntTC"
             [ bench "readInt"           $ nf readInt n
             , bench "readInt64"         $ nf readInt64 n
             , bench "readInteger"       $ nf readInteger n

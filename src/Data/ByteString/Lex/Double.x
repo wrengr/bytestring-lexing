@@ -1,6 +1,6 @@
 {
 -- Turn off some common warnings about Alex-generated code.
-{-# OPTIONS_GHC -Wall -fno-warn-tabs -fno-warn-missing-signatures #-}
+-- {-# OPTIONS_GHC -Wall -fno-warn-tabs -fno-warn-missing-signatures #-}
 ----------------------------------------------------------------
 --                                                    2012.01.25
 -- |

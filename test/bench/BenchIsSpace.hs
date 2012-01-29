@@ -153,7 +153,7 @@ not_isSpace_w8' = not . isSpace_w8'
 
 main :: IO ()
 main = defaultMain
-    [ bgroup "isNotSpace@Char"
+    [ bgroup "isSpace@Char"
         [ bench "Data.Char.isSpace" $ nf (map C.isSpace)        ['\x0'..'\255']
         , bench "isSpace_DataChar"  $ nf (map isSpace_DataChar) ['\x0'..'\255']
         , bench "isSpace_Char"      $ nf (map isSpace_Char)     ['\x0'..'\255']
@@ -161,7 +161,7 @@ main = defaultMain
         , bench "isSpace_AttoChar8" $ nf (map isSpace_AttoChar8)['\x0'..'\255']
         , bench "isSpace_Char8"     $ nf (map isSpace_Char8)    ['\x0'..'\255']
         ]
-    , bgroup "isNotSpace@Word8"
+    , bgroup "isSpace@Word8"
         [ bench "isSpace_w8"        $ nf (map isSpace_w8)       [0..255]
         , bench "isSpace_w8'"       $ nf (map isSpace_w8')      [0..255]
         ]
