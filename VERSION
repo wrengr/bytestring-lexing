@@ -1,4 +1,4 @@
-0.3.0 (2012.00.00):
+0.3.0 (2012.01.28):
     - Added Data.ByteString.Lex.Integral
     - Converted repo to Darcs-2 hashed format.
     - wren ng thornton took over maintainership.
