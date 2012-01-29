@@ -1,0 +1,37 @@
+bytestring-lexing
+=================
+
+This is a relatively simple package and should be easy to install.
+It requires Alex for generating the Double lexers. Once that is
+installed, you should be able to use one of the following standard
+methods to install it.
+
+    -- With cabal-install and without the source:
+    $> cabal install bytestring-lexing
+    
+    -- With cabal-install and with the source already:
+    $> cd bytestring-lexing
+    $> cabal install
+    
+    -- Without cabal-install, but with the source already:
+    $> cd bytestring-lexing
+    $> runhaskell Setup.hs configure --user
+    $> runhaskell Setup.hs build
+    $> runhaskell Setup.hs test
+    $> runhaskell Setup.hs haddock --hyperlink-source
+    $> runhaskell Setup.hs install
+
+The test step is optional and currently does nothing.
+
+
+Portability
+===========
+
+An attempt has been made to keep this library portable. However,
+it relies on some language extensions which have been accepted into
+the Haskell standard following the Haskell98 report. All the required
+language extensions are:
+
+FFI
+
+----------------------------------------------------------- fin.

@@ -1,9 +1,9 @@
 ----------------------------------------------------------------
--- wren ng thornton <wren@community.haskell.org>    ~ 2012.01.25
+-- wren ng thornton <wren@community.haskell.org>    ~ 2012.01.28
 ----------------------------------------------------------------
 
 Name:           bytestring-lexing
-Version:        0.3.0
+Version:        0.3.0.1
 -- Source-Repository requires version 1.6
 Cabal-Version:  >= 1.6
 Build-Type:     Simple
@@ -15,8 +15,8 @@ Author:         wren ng thornton, Don Stewart
 Maintainer:     wren@community.haskell.org
 Homepage:       http://code.haskell.org/~wren/
 Category:       Data
-Synopsis:       Parse literals efficiently from strict or lazy bytestrings
-Description:    Parse literals efficiently from strict or lazy bytestrings
+Synopsis:       Parse and produce literals efficiently from strict or lazy bytestrings.
+Description:    Parse and produce literals efficiently from strict or lazy bytestrings.
 
 Tested-With:    GHC ==6.8.2, GHC ==6.10.1, GHC ==6.12.1, GHC ==7.0.3
 Source-Repository head
