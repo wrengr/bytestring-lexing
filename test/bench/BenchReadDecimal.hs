@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE OverloadedStrings, MagicHash, BangPatterns #-}
 ----------------------------------------------------------------
---                                                    2012.01.27
+--                                                    2012.01.31
 -- |
 -- Module      :  BenchReadDecimal
 -- Copyright   :  Copyright (c) 2010--2012 wren ng thornton,
@@ -33,58 +33,70 @@ import qualified Test.QuickCheck       as QC
 -- ReadInt is a module internal to Warp.
 ----import qualified ReadInt as RI
 
-import qualified Data.ByteString.Lex.Integral as BSLex (readDecimal)
+import qualified Data.ByteString.Lex.Integral as BSLex
 
 import GHC.Prim
 import GHC.Types
 import GHC.Word
 ----------------------------------------------------------------
 
+unwrap :: Num a => Maybe (a, ByteString) -> a
+{-# INLINE unwrap #-}
+unwrap = fst . fromMaybe (0,"")
+
+atInt :: Int -> Int
+{-# INLINE atInt #-}
+atInt = id
+
+atInt64 :: Int64 -> Int64
+{-# INLINE atInt64 #-}
+atInt64 = id
+
+atInteger :: Integer -> Integer
+{-# INLINE atInteger #-}
+atInteger = id
+
 -- This is the absolute mimimal solution. It will return garbage
 -- if the input string contains anything other than ASCII digits.
-readIntOrig :: ByteString -> Integer
-readIntOrig = BS.foldl' (\x w -> x * 10 + fromIntegral w - 48) 0
+bsfoldl_Integer :: ByteString -> Integer
+bsfoldl_Integer = BS.foldl' (\x w -> x * 10 + fromIntegral w - 48) 0
 
+-- No checking for non-digits. Will overflow at 2^31 on 32 bit CPUs.
+bs8foldl_Int :: ByteString -> Int
+bs8foldl_Int = BS8.foldl' (\i c -> i * 10 + C.digitToInt c) 0
 
 -- Using Numeric.readDec which works on String, so the ByteString
 -- has to be unpacked first.
-readDec :: ByteString -> Integer
-readDec s =
+numericReadDec_Integer :: ByteString -> Integer
+numericReadDec_Integer s =
     case N.readDec (BS8.unpack s) of
     []      -> 0
     (x,_):_ -> x
 
-
 -- Use ByteString's readInt function.
-readIntBS :: ByteString -> Int
-readIntBS = fst . fromMaybe (0,"") . BS8.readInt
+bs8readInt :: ByteString -> Int
+bs8readInt = unwrap . BS8.readInt
 
 -- Use ByteString's readInteger function.
-readIntegerBS :: ByteString -> Integer
-readIntegerBS = fst . fromMaybe (0,"") . BS8.readInteger
-
-
--- No checking for non-digits. Will overflow at 2^31 on 32 bit CPUs.
-readIntRaw :: ByteString -> Int
-readIntRaw = BS8.foldl' (\i c -> i * 10 + C.digitToInt c) 0
+bs8readInteger :: ByteString -> Integer
+bs8readInteger = unwrap . BS8.readInteger
 
 ----------------------------------------------------------------
 -- The best solution Erik found.
-readIntTC :: Integral a => ByteString -> a
-readIntTC
+readIntegralTC :: Integral a => ByteString -> a
+readIntegralTC
     = fromIntegral
     . BS8.foldl' (\i c -> i * 10 + C.digitToInt c) 0 
     . BS8.takeWhile C.isDigit
 
--- Three specialisations of readIntTC.
-readInt :: ByteString -> Int
-readInt = readIntTC
+readIntTC :: ByteString -> Int
+readIntTC = readIntegralTC
 
-readInt64 :: ByteString -> Int64
-readInt64 = readIntTC
+readInt64TC :: ByteString -> Int64
+readInt64TC = readIntegralTC
 
-readInteger :: ByteString -> Integer
-readInteger = readIntTC
+readIntegerTC :: ByteString -> Integer
+readIntegerTC = readIntegralTC
 
 ----------------------------------------------------------------
 -- MagicHash version suggested by Vincent Hanquez.
@@ -133,6 +145,7 @@ mhDigitToInt (C# i) = I# (word2Int# (indexWord8OffAddr# addr (ord# i)))
 
 ----------------------------------------------------------------
 -- A faster MagicHash version by Christoph Breitkopf
+{-
 readIntegralMHFast :: Integral a => ByteString -> a
 readIntegralMHFast s = go 0 0 (BS8.length s) s
     where
@@ -177,11 +190,11 @@ readInt64MHFast = readIntegralMHFast
 
 readIntegerMHFast :: ByteString -> Integer
 readIntegerMHFast = readIntegralMHFast
+-}
 
-----------------------------------------------------------------
 -- Crank on it just a bit more
-readIntegralMHFast' :: Integral a => ByteString -> a
-readIntegralMHFast' s = go 0 0 s
+readIntegralMHFast :: Integral a => ByteString -> a
+readIntegralMHFast s = go 0 0 s
     where
     len = BS8.length s
     
@@ -192,11 +205,13 @@ readIntegralMHFast' s = go 0 0 s
         | v < 10    = go (10 * n + v) (i+1) bs
         | otherwise = n
         where
-        v = fromIntegral (mhDigitToIntFast' (BSU.unsafeIndex bs i))
+        v = fromIntegral (mhDigitToIntFast (BSU.unsafeIndex bs i))
 
-mhDigitToIntFast' :: Word8 -> Int
-mhDigitToIntFast' (W8# i) = I# (indexInt8OffAddr# addr (word2Int# i))
+mhDigitToIntFast :: Word8 -> Int
+{-# INLINE mhDigitToIntFast #-}
+mhDigitToIntFast (W8# i) = I# (indexInt8OffAddr# addr (word2Int# i))
     where
+    {-# NOINLINE addr #-}
     !(Table addr) = table
     table :: Table
     table = Table
@@ -218,14 +233,14 @@ mhDigitToIntFast' (W8# i) = I# (indexInt8OffAddr# addr (word2Int# i))
         \\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f\x7f"#
 -- -> -- Fix a syntax highlighting bug in jEdit.
 
-readIntMHFast' :: ByteString -> Int
-readIntMHFast' = readIntegralMHFast'
+readIntMHFast :: ByteString -> Int
+readIntMHFast = readIntegralMHFast
 
-readInt64MHFast' :: ByteString -> Int64
-readInt64MHFast' = readIntegralMHFast'
+readInt64MHFast :: ByteString -> Int64
+readInt64MHFast = readIntegralMHFast
 
-readIntegerMHFast' :: ByteString -> Integer
-readIntegerMHFast' = readIntegralMHFast'
+readIntegerMHFast :: ByteString -> Integer
+readIntegerMHFast = readIntegralMHFast
 
 ----------------------------------------------------------------
 -- This is the one Warp actually uses. It's essentially the same as readInt64MH
@@ -234,10 +249,6 @@ readIntegerMHFast' = readIntegralMHFast'
 
 ----------------------------------------------------------------
 readDecimalOrig :: (Integral a) => ByteString -> Maybe (a, ByteString)
-{-# SPECIALIZE readDecimalOrig ::
-    ByteString -> Maybe (Int,     ByteString),
-    ByteString -> Maybe (Int64,   ByteString),
-    ByteString -> Maybe (Integer, ByteString) #-}
 readDecimalOrig = start
     where
     -- This implementation is near verbatim from
@@ -263,32 +274,27 @@ readDecimalOrig = start
                     loop (n * 10 + fromIntegral (w - 0x30)) (BSU.unsafeTail xs)
               | otherwise -> (n,xs)
 
-readDecimalOrigInt_      :: ByteString -> Int
-readDecimalOrigInt_      = fst . fromMaybe (0,"") . readDecimalOrig
+readDecimalOrig_Int      :: ByteString -> Int
+readDecimalOrig_Int      = unwrap . readDecimalOrig
 
-readDecimalOrigInt64_    :: ByteString -> Int64
-readDecimalOrigInt64_    = fst . fromMaybe (0,"") . readDecimalOrig
+readDecimalOrig_Int64    :: ByteString -> Int64
+readDecimalOrig_Int64    = unwrap . readDecimalOrig
 
-readDecimalOrigInt64_2   :: ByteString -> Int64
-readDecimalOrigInt64_2   = fromIntegral . readDecimalOrigInt_
+readDecimalHack_Int64    :: ByteString -> Int64
+readDecimalHack_Int64    = fromIntegral . readDecimalOrig_Int
 
-readDecimalOrigInteger_  :: ByteString -> Integer
-readDecimalOrigInteger_  = fst . fromMaybe (0,"") . readDecimalOrig
+readDecimalOrig_Integer  :: ByteString -> Integer
+readDecimalOrig_Integer  = unwrap . readDecimalOrig
 
-readDecimalOrigInteger_2 :: ByteString -> Integer
-readDecimalOrigInteger_2 = fromIntegral . readDecimalOrigInt_
+readDecimalHack_Integer  :: ByteString -> Integer
+readDecimalHack_Integer  = fromIntegral . readDecimalOrig_Int
 
 
 ----------------------------------------------------------------
 -- This splits the difference between the slow but correct
--- 'readDecimalInt64_' (840ns) and the fast but incorrect
--- 'readDecimalInt64_2' (175ns) at about 475ns on my machine. N.B.,
--- passing a parameter to track our position in the group reduces
--- performance down to the level of 'readIntOrig' and 'readIntegerBS';
--- so the code duplication of unrolling the loop seems necessary
--- for this approach.
-readDecimalIntegral_3 :: Integral a => ByteString -> Maybe (a, ByteString)
-readDecimalIntegral_3 = start
+-- 'readDecimalOrig_Int64' (840ns) and the fast but incorrect 'readDecimalHack_Int64' (175ns) at about 475ns on my machine. N.B., passing a parameter to track our position in the group reduces performance down to the level of 'bsfoldl_Integer' and 'bs8readInteger'; so the code duplication of unrolling the loop seems necessary for this approach.
+readDecimalUnrolled :: Integral a => ByteString -> Maybe (a, ByteString)
+readDecimalUnrolled = start
     where
     start xs
         | BS.null xs = Nothing
@@ -374,22 +380,19 @@ readDecimalIntegral_3 = start
                     loop0 (m*1000000000 + fromIntegral (n*10 + fromIntegral(w-0x30))) (BSU.unsafeTail xs)
               | otherwise -> (m*100000000 + fromIntegral n, xs)
 
-readDecimalInt_3 :: ByteString -> Int
-readDecimalInt_3 = fst . fromMaybe (0,"") . readDecimalIntegral_3
+readDecimalUnrolled_Int :: ByteString -> Int
+readDecimalUnrolled_Int = unwrap . readDecimalUnrolled
 
-readDecimalInt64_3 :: ByteString -> Int64
-readDecimalInt64_3 = fst . fromMaybe (0,"") . readDecimalIntegral_3
+readDecimalUnrolled_Int64 :: ByteString -> Int64
+readDecimalUnrolled_Int64 = unwrap . readDecimalUnrolled
 
-readDecimalInteger_3 :: ByteString -> Integer
-readDecimalInteger_3 = fst . fromMaybe (0,"") . readDecimalIntegral_3
+readDecimalUnrolled_Integer :: ByteString -> Integer
+readDecimalUnrolled_Integer = unwrap . readDecimalUnrolled
 
 
--- A cleaned up version of readDecimalIntegral_3. N.B., this version
--- doesn't guarantee prompt collection if the input string is
--- exhausted; though presumably clients will check for nullity and
--- discard empty strings themselves...
-readDecimalIntegral_3' :: Integral a => ByteString -> Maybe (a, ByteString)
-readDecimalIntegral_3' = start
+-- A cleaned up version of readDecimalUnrolled. N.B., this version doesn't guarantee prompt collection if the input string is exhausted; though presumably clients will check for nullity and discard empty strings themselves...
+readDecimalUnrolled' :: Integral a => ByteString -> Maybe (a, ByteString)
+readDecimalUnrolled' = start
     where
     isDecimal :: Word8 -> Bool
     {-# INLINE isDecimal #-}
@@ -471,19 +474,19 @@ readDecimalIntegral_3' = start
         | otherwise = (m*100000000 + fromIntegral n, xs)
         where w = BSU.unsafeHead xs
 
-readDecimalInt_3' :: ByteString -> Int
-readDecimalInt_3' = fst . fromMaybe (0,"") . readDecimalIntegral_3'
+readDecimalUnrolled'_Int :: ByteString -> Int
+readDecimalUnrolled'_Int = unwrap . readDecimalUnrolled'
 
-readDecimalInt64_3' :: ByteString -> Int64
-readDecimalInt64_3' = fst . fromMaybe (0,"") . readDecimalIntegral_3'
+readDecimalUnrolled'_Int64 :: ByteString -> Int64
+readDecimalUnrolled'_Int64 = unwrap . readDecimalUnrolled'
 
-readDecimalInteger_3' :: ByteString -> Integer
-readDecimalInteger_3' = fst . fromMaybe (0,"") . readDecimalIntegral_3'
+readDecimalUnrolled'_Integer :: ByteString -> Integer
+readDecimalUnrolled'_Integer = unwrap . readDecimalUnrolled'
 
 ----------------------------------------------------------------
 -- Try to add a fast track that removes the null tests. Doesn't help; hurts a little.
-readDecimalInt64_4 :: ByteString -> Int64
-readDecimalInt64_4 = fst . fromMaybe (0,"") . start
+readDecimalUnrolledAlt_Int64 :: ByteString -> Int64
+readDecimalUnrolledAlt_Int64 = unwrap . start
     where
     start xs
         | BS.null xs = Nothing
@@ -638,8 +641,8 @@ readDecimalInt64_4 = fst . fromMaybe (0,"") . start
 -- Do a three stage unrolling for Integer. Only gives a marginal
 -- improvement, though really the payoff would be for things /much/
 -- larger than 64-bits.
-readDecimalInteger_5 :: ByteString -> Integer
-readDecimalInteger_5 = fst . fromMaybe (0,"") . start
+readDecimalTwiceUnrolled_Integer :: ByteString -> Integer
+readDecimalTwiceUnrolled_Integer = unwrap . start
     where
     start xs
         | BS.null xs = Nothing
@@ -821,15 +824,130 @@ readDecimalInteger_5 = fst . fromMaybe (0,"") . start
 
 
 ----------------------------------------------------------------
+-- The requested version without @Maybe(_,ByteString)@ wrapping.
+
+readDecimalUnwrapped_Int      :: ByteString -> Int
+readDecimalUnwrapped_Int      = readDecimalUnwrapped
+
+readDecimalUnwrapped_Int64    :: ByteString -> Int64
+readDecimalUnwrapped_Int64    = readDecimalUnwrapped
+
+readDecimalUnwrapped_Integer  :: ByteString -> Integer
+readDecimalUnwrapped_Integer  = readDecimalUnwrapped
+
+readDecimalUnwrapped :: Integral a => ByteString -> a
+readDecimalUnwrapped = start
+    where
+    isDecimal :: Word8 -> Bool
+    {-# INLINE isDecimal #-}
+    isDecimal w = 0x39 >= w && w >= 0x30
+    
+    toDigit :: Integral a => Word8 -> a
+    {-# INLINE toDigit #-}
+    toDigit w = fromIntegral (w - 0x30)
+    
+    addDigit :: Int -> Word8 -> Int
+    {-# INLINE addDigit #-}
+    addDigit n w = n * 10 + toDigit w
+    
+    start xs
+        | BS.null xs = 0
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | isDecimal w -> loop0 (toDigit w) (BSU.unsafeTail xs)
+              | otherwise   -> 0
+    
+    loop0 :: Integral a => a -> ByteString -> a
+    loop0 m xs
+        | m `seq` xs `seq` False = undefined
+        | BS.null xs = m
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | isDecimal w -> loop1 m (toDigit w) (BSU.unsafeTail xs)
+              | otherwise   -> m
+    
+    loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8
+        :: Integral a => a -> Int -> ByteString -> a
+    loop1 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = m*10 + fromIntegral n
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | isDecimal w -> loop2 m (addDigit n w) (BSU.unsafeTail xs)
+              | otherwise   -> m*10 + fromIntegral n
+    loop2 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = m*100 + fromIntegral n
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | isDecimal w -> loop3 m (addDigit n w) (BSU.unsafeTail xs)
+              | otherwise   -> m*100 + fromIntegral n
+    loop3 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = m*1000 + fromIntegral n
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | isDecimal w -> loop4 m (addDigit n w) (BSU.unsafeTail xs)
+              | otherwise   -> m*1000 + fromIntegral n
+    loop4 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = m*10000 + fromIntegral n
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | isDecimal w -> loop5 m (addDigit n w) (BSU.unsafeTail xs)
+              | otherwise   -> m*10000 + fromIntegral n
+    loop5 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = m*100000 + fromIntegral n
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | isDecimal w -> loop6 m (addDigit n w) (BSU.unsafeTail xs)
+              | otherwise   -> m*100000 + fromIntegral n
+    loop6 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = m*1000000 + fromIntegral n
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | isDecimal w -> loop7 m (addDigit n w) (BSU.unsafeTail xs)
+              | otherwise   -> m*1000000 + fromIntegral n
+    loop7 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = m*10000000 + fromIntegral n
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | isDecimal w -> loop8 m (addDigit n w) (BSU.unsafeTail xs)
+              | otherwise   -> m*10000000 + fromIntegral n
+    loop8 m n xs
+        | m `seq` n `seq` xs `seq` False = undefined
+        | BS.null xs = m*100000000 + fromIntegral n
+        | otherwise  =
+            case BSU.unsafeHead xs of
+            w | isDecimal w -> loop0
+                    (m*1000000000 + fromIntegral (addDigit n w))
+                    (BSU.unsafeTail xs)
+              | otherwise   -> m*100000000 + fromIntegral n
+
+----------------------------------------------------------------
+----------------------------------------------------------------
 -- The versions currently used by the library
-readDecimalInt      :: ByteString -> Int
-readDecimalInt      = fst . fromMaybe (0,"") . BSLex.readDecimal
+readDecimal_Int      :: ByteString -> Int
+readDecimal_Int      = unwrap . BSLex.readDecimal
 
-readDecimalInt64    :: ByteString -> Int64
-readDecimalInt64    = fst . fromMaybe (0,"") . BSLex.readDecimal
+readDecimal_Int64    :: ByteString -> Int64
+readDecimal_Int64    = unwrap . BSLex.readDecimal
 
-readDecimalInteger  :: ByteString -> Integer
-readDecimalInteger  = fst . fromMaybe (0,"") . BSLex.readDecimal
+readDecimal_Integer  :: ByteString -> Integer
+readDecimal_Integer  = unwrap . BSLex.readDecimal
+
+
+readDecimal__Int      :: ByteString -> Int
+readDecimal__Int      = BSLex.readDecimal_
+
+readDecimal__Int64    :: ByteString -> Int64
+readDecimal__Int64    = BSLex.readDecimal_
+
+readDecimal__Integer  :: ByteString -> Integer
+readDecimal__Integer  = BSLex.readDecimal_
 
 ----------------------------------------------------------------
 ----------------------------------------------------------------
@@ -847,10 +965,10 @@ prop_read_show_idempotent freader x =
 
 runQuickCheckTests :: IO ()
 runQuickCheckTests = do
-    putStrLn "Checking readIntTC..."
-    QC.quickCheck (prop_read_show_idempotent readInt)
-    QC.quickCheck (prop_read_show_idempotent readInt64)
-    QC.quickCheck (prop_read_show_idempotent readInteger)
+    putStrLn "Checking readIntegralTC (buggy)..."
+    QC.quickCheck (prop_read_show_idempotent readIntTC)
+    QC.quickCheck (prop_read_show_idempotent readInt64TC)
+    QC.quickCheck (prop_read_show_idempotent readIntegerTC)
     --
     putStrLn "Checking readIntegralMH..."
     QC.quickCheck (prop_read_show_idempotent readIntMH)
@@ -859,91 +977,99 @@ runQuickCheckTests = do
     --
     putStrLn "Checking readIntegralMHFast..."
     QC.quickCheck (prop_read_show_idempotent readIntMHFast)
-    QC.quickCheck (prop_read_show_idempotent readIntMHFast')
     QC.quickCheck (prop_read_show_idempotent readInt64MHFast)
-    QC.quickCheck (prop_read_show_idempotent readInt64MHFast')
     QC.quickCheck (prop_read_show_idempotent readIntegerMHFast)
-    QC.quickCheck (prop_read_show_idempotent readIntegerMHFast')
     --
     ----putStrLn "Checking readIntWarp..."
     ----QC.quickCheck (prop_read_show_idempotent readIntWarp)
     --
-    putStrLn "Checking readDecimalOrig (correct)..."
-    QC.quickCheck (prop_read_show_idempotent readDecimalOrigInt_)
-    QC.quickCheck (prop_read_show_idempotent readDecimalOrigInt64_)
-    QC.quickCheck (prop_read_show_idempotent readDecimalOrigInteger_)
-    putStrLn "Checking readDecimalOrig (buggy fast)..."
-    QC.quickCheck (prop_read_show_idempotent readDecimalOrigInt64_2)
-    QC.quickCheck (prop_read_show_idempotent readDecimalOrigInteger_2)
-    putStrLn "Checking readDecimalIntegral_3..."
-    QC.quickCheck (prop_read_show_idempotent readDecimalInt_3)
-    QC.quickCheck (prop_read_show_idempotent readDecimalInt_3')
-    QC.quickCheck (prop_read_show_idempotent readDecimalInt64_3)
-    QC.quickCheck (prop_read_show_idempotent readDecimalInt64_3')
-    QC.quickCheck (prop_read_show_idempotent readDecimalInteger_3)
-    QC.quickCheck (prop_read_show_idempotent readDecimalInteger_3')
-    putStrLn "Checking readDecimalInt64_4..."
-    QC.quickCheck (prop_read_show_idempotent readDecimalInt64_4)
-    putStrLn "Checking readDecimalInteger_5..."
-    QC.quickCheck (prop_read_show_idempotent readDecimalInteger_5)
+    putStrLn "Checking readDecimalOrig..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalOrig_Int)
+    QC.quickCheck (prop_read_show_idempotent readDecimalOrig_Int64)
+    QC.quickCheck (prop_read_show_idempotent readDecimalOrig_Integer)
+    putStrLn "Checking readDecimalHack (buggy)..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalHack_Int64)
+    QC.quickCheck (prop_read_show_idempotent readDecimalHack_Integer)
+    putStrLn "Checking readDecimalUnrolled..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalUnrolled_Int)
+    QC.quickCheck (prop_read_show_idempotent readDecimalUnrolled'_Int)
+    QC.quickCheck (prop_read_show_idempotent readDecimalUnrolled_Int64)
+    QC.quickCheck (prop_read_show_idempotent readDecimalUnrolled'_Int64)
+    QC.quickCheck (prop_read_show_idempotent readDecimalUnrolled_Integer)
+    QC.quickCheck (prop_read_show_idempotent readDecimalUnrolled'_Integer)
+    putStrLn "Checking readDecimalUnrolledAlt_Int64..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalUnrolledAlt_Int64)
+    putStrLn "Checking readDecimalTwiceUnrolled_Integer..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalTwiceUnrolled_Integer)
     putStrLn "Checking readDecimal (current)..."
-    QC.quickCheck (prop_read_show_idempotent readDecimalInt)
-    QC.quickCheck (prop_read_show_idempotent readDecimalInt64)
-    QC.quickCheck (prop_read_show_idempotent readDecimalInteger)
+    QC.quickCheck (prop_read_show_idempotent readDecimal_Int)
+    QC.quickCheck (prop_read_show_idempotent readDecimal_Int64)
+    QC.quickCheck (prop_read_show_idempotent readDecimal_Integer)
+    putStrLn "Checking readDecimalUnwrapped..."
+    QC.quickCheck (prop_read_show_idempotent readDecimalUnwrapped_Int)
+    QC.quickCheck (prop_read_show_idempotent readDecimalUnwrapped_Int64)
+    QC.quickCheck (prop_read_show_idempotent readDecimalUnwrapped_Integer)
 
 
 runCriterionTests :: ByteString -> IO ()
 runCriterionTests n =
     defaultMain
         [ bgroup "naive"
-            [ bench "readIntOrig"       $ nf readIntOrig n
-            , bench "readDec"           $ nf readDec n
-            , bench "readIntBS"         $ nf readIntBS n
-            , bench "readIntegerBS"     $ nf readIntegerBS n
-            , bench "readRaw"           $ nf readIntRaw n
+            [ bench "Numeric.readDec @Integer" $ nf numericReadDec_Integer n
+            , bench "BS.Char8.foldl' @Int"     $ nf bs8foldl_Int n
+            , bench "BS.foldl' @Integer"       $ nf bsfoldl_Integer n
+            , bench "BS.Char8.readInt"         $ nf bs8readInt n
+            , bench "BS.Char8.readInteger"     $ nf bs8readInteger n
             ]
-        , bgroup "readIntTC"
-            [ bench "readInt"           $ nf readInt n
-            , bench "readInt64"         $ nf readInt64 n
-            , bench "readInteger"       $ nf readInteger n
+        , bgroup "readIntegralTC (buggy)"
+            [ bench "Int"           $ nf readIntTC n
+            , bench "Int64"         $ nf readInt64TC n
+            , bench "Integer"       $ nf readIntegerTC n
             ]
-        , bgroup "readIntegralMH (buggy)"
-            [ bench "readIntMH"         $ nf readIntMH n
-            , bench "readInt64MH"       $ nf readInt64MH n
-            , bench "readIntegerMH"     $ nf readIntegerMH n
+        , bgroup "readIntegralMH"
+            [ bench "Int"           $ nf readIntMH n
+            , bench "Int64"         $ nf readInt64MH n
+            , bench "Integer"       $ nf readIntegerMH n
             ]
         , bgroup "readIntegralMHFast"
-            [ bench "readIntMHFast"      $ nf readIntMHFast      n
-            , bench "readIntMHFast'"     $ nf readIntMHFast'     n
-            , bench "readInt64MHFast"    $ nf readInt64MHFast    n
-            , bench "readInt64MHFast'"   $ nf readInt64MHFast'   n
-            , bench "readIntegerMHFast"  $ nf readIntegerMHFast  n
-            , bench "readIntegerMHFast'" $ nf readIntegerMHFast' n
+            [ bench "Int"           $ nf readIntMHFast      n
+            , bench "Int64"         $ nf readInt64MHFast    n
+            , bench "Integer"       $ nf readIntegerMHFast  n
             ]
         ---- , bench "readIntWarp"   $ nf readIntWarp n
-        , bgroup "readDecimalOrig (correct)"
-            [ bench "readDecimalOrigInt_"      $ nf readDecimalOrigInt_ n
-            , bench "readDecimalOrigInt64_"    $ nf readDecimalOrigInt64_ n
-            , bench "readDecimalOrigInteger_"  $ nf readDecimalOrigInteger_ n
+        , bgroup "readDecimalOrig"
+            [ bench "Int"           $ nf readDecimalOrig_Int     n
+            , bench "Int64"         $ nf readDecimalOrig_Int64   n
+            , bench "Integer"       $ nf readDecimalOrig_Integer n
             ]
-        , bgroup "readDecimalOrig (buggy fast)"
-            [ bench "readDecimalOrigInt64_2"   $ nf readDecimalOrigInt64_2 n
-            , bench "readDecimalOrigInteger_2" $ nf readDecimalOrigInteger_2 n
+        , bgroup "readDecimalHack (buggy)"
+            [ bench "Int64"         $ nf readDecimalHack_Int64 n
+            , bench "Integer"       $ nf readDecimalHack_Integer n
             ]
-        , bgroup "readDecimal (unrolled)"
-            [ bench "readDecimalInt_3"      $ nf readDecimalInt_3      n
-            , bench "readDecimalInt_3'"     $ nf readDecimalInt_3'     n
-            , bench "readDecimalInt64_3"    $ nf readDecimalInt64_3    n
-            , bench "readDecimalInt64_3'"   $ nf readDecimalInt64_3'   n
-            , bench "readDecimalInt64_4"    $ nf readDecimalInt64_4    n
-            , bench "readDecimalInteger_3"  $ nf readDecimalInteger_3  n
-            , bench "readDecimalInteger_3'" $ nf readDecimalInteger_3' n
-            , bench "readDecimalInteger_5"  $ nf readDecimalInteger_5  n
+        , bgroup "readDecimalUnrolled"
+            [ bench "Int"          $ nf readDecimalUnrolled_Int          n
+            , bench "Int'"         $ nf readDecimalUnrolled'_Int         n
+            , bench "Int64"        $ nf readDecimalUnrolled_Int64        n
+            , bench "Int64'"       $ nf readDecimalUnrolled'_Int64       n
+            , bench "Int64_alt"    $ nf readDecimalUnrolledAlt_Int64     n
+            , bench "Integer"      $ nf readDecimalUnrolled_Integer      n
+            , bench "Integer'"     $ nf readDecimalUnrolled'_Integer     n
+            , bench "Integer_alt"  $ nf readDecimalTwiceUnrolled_Integer n
+            ]
+        , bgroup "readDecimalUnwrapped"
+            [ bench "Int"          $ nf readDecimalUnwrapped_Int     n
+            , bench "Int64"        $ nf readDecimalUnwrapped_Int64   n
+            , bench "Integer"      $ nf readDecimalUnwrapped_Integer n
             ]
         , bgroup "readDecimal (current)"
-            [ bench "readDecimalInt"     $ nf readDecimalInt     n
-            , bench "readDecimalInt64"   $ nf readDecimalInt64   n
-            , bench "readDecimalInteger" $ nf readDecimalInteger n
+            [ bench "Int"          $ nf readDecimal_Int n
+            , bench "Int64"        $ nf readDecimal_Int64 n
+            , bench "Integer"      $ nf readDecimal_Integer n
+            ]
+        , bgroup "readDecimal_ (current)"
+            [ bench "Int"          $ nf readDecimal__Int     n
+            , bench "Int64"        $ nf readDecimal__Int64   n
+            , bench "Integer"      $ nf readDecimal__Integer n
             ]
         ]
 
