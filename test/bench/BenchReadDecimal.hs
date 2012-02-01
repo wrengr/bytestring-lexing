@@ -86,7 +86,7 @@ bs8readInteger = unwrap . BS8.readInteger
 readIntegralTC :: Integral a => ByteString -> a
 readIntegralTC
     = fromIntegral
-    . BS8.foldl' (\i c -> i * 10 + C.digitToInt c) 0 
+    . BS8.foldl' (\i c -> i * 10 + C.digitToInt c) 0
     . BS8.takeWhile C.isDigit
 
 readIntTC :: ByteString -> Int
@@ -292,7 +292,12 @@ readDecimalHack_Integer  = fromIntegral . readDecimalOrig_Int
 
 ----------------------------------------------------------------
 -- This splits the difference between the slow but correct
--- 'readDecimalOrig_Int64' (840ns) and the fast but incorrect 'readDecimalHack_Int64' (175ns) at about 475ns on my machine. N.B., passing a parameter to track our position in the group reduces performance down to the level of 'bsfoldl_Integer' and 'bs8readInteger'; so the code duplication of unrolling the loop seems necessary for this approach.
+-- 'readDecimalOrig_Int64' (840ns) and the fast but incorrect
+-- 'readDecimalHack_Int64' (175ns) at about 475ns on my machine.
+-- N.B., passing a parameter to track our position in the group
+-- reduces performance down to the level of 'bsfoldl_Integer' and
+-- 'bs8readInteger'; so the code duplication of unrolling the loop
+-- seems necessary for this approach.
 readDecimalUnrolled :: Integral a => ByteString -> Maybe (a, ByteString)
 readDecimalUnrolled = start
     where
@@ -390,7 +395,10 @@ readDecimalUnrolled_Integer :: ByteString -> Integer
 readDecimalUnrolled_Integer = unwrap . readDecimalUnrolled
 
 
--- A cleaned up version of readDecimalUnrolled. N.B., this version doesn't guarantee prompt collection if the input string is exhausted; though presumably clients will check for nullity and discard empty strings themselves...
+-- A cleaned up version of readDecimalUnrolled. N.B., this version
+-- doesn't guarantee prompt collection if the input string is
+-- exhausted; though presumably clients will check for nullity and
+-- discard empty strings themselves...
 readDecimalUnrolled' :: Integral a => ByteString -> Maybe (a, ByteString)
 readDecimalUnrolled' = start
     where
@@ -484,7 +492,8 @@ readDecimalUnrolled'_Integer :: ByteString -> Integer
 readDecimalUnrolled'_Integer = unwrap . readDecimalUnrolled'
 
 ----------------------------------------------------------------
--- Try to add a fast track that removes the null tests. Doesn't help; hurts a little.
+-- Try to add a fast track that removes the null tests. Doesn't
+-- help; hurts a little.
 readDecimalUnrolledAlt_Int64 :: ByteString -> Int64
 readDecimalUnrolledAlt_Int64 = unwrap . start
     where
@@ -781,7 +790,7 @@ readDecimalTwiceUnrolled_Integer = unwrap . start
             case BSU.unsafeHead xs of
             w | 0x39 >= w && w >= 0x30 ->
                     go96 o m (n*10 + fromIntegral(w-0x30)) (BSU.unsafeTail xs)
-              | otherwise -> 
+              | otherwise ->
                         (o*10000000000000000 + fromIntegral
                         (m*100000), xs)
     go96 o m n xs
