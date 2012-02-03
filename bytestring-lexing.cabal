@@ -1,5 +1,5 @@
 ----------------------------------------------------------------
--- wren ng thornton <wren@community.haskell.org>    ~ 2012.01.31
+-- wren ng thornton <wren@community.haskell.org>    ~ 2012.02.02
 ----------------------------------------------------------------
 
 Name:           bytestring-lexing
@@ -18,7 +18,8 @@ Category:       Data
 Synopsis:       Parse and produce literals efficiently from strict or lazy bytestrings.
 Description:    Parse and produce literals efficiently from strict or lazy bytestrings.
 
-Tested-With:    GHC ==6.8.2, GHC ==6.10.1, GHC ==6.12.1, GHC ==7.0.3
+Extra-source-files: AUTHORS, README, VERSION
+Tested-With: GHC ==6.8.2, GHC ==6.10.1, GHC ==6.12.1, GHC ==7.0.3
 Source-Repository head
     Type:     darcs
     Location: http://community.haskell.org/~wren/bytestring-lexing
