@@ -1,0 +1,101 @@
+/* <head><link rel="stylesheet" type="text/css" href="index.css" />
+ *
+ * Colors:
+ * <http://llama.freegeek.org/~wren/resources/css/colors/wine.css>
+ *     wine=#750D75, ocean=#225555, graphite=#DDDDDD, gris=#333333
+ * <http://en.wikipedia.org//skins-1.5/monobook/main.css?163>
+ *     Darkish default blue = #002bb8, default purple = #5a3696
+ */
+
+@media screen {
+	body      {margin: 0; padding: 0;}
+	a:link    {color: #002bf0; text-decoration: none;}
+	a:visited {color: #5a3696;}
+	a:hover   {color: #5a3696;}
+}
+@media print {
+    a:link    {color: #000000; text-decoration: underline;}
+    a:visited {color: #000000;}
+}
+@media screen,print {
+	body {
+		font-family: /*Cochin,*/ Times, serif;
+		background-color: #FFFFFF;
+		color:            #000000;
+	}
+	a:link    {}
+	a:visited {text-decoration: none;}
+	a:hover   {text-decoration: underline;}
+	
+	
+	/* *** Centered fixed-width column *** */
+	body  {text-align: center;} /* fix buggy IE */
+	#main {margin: 0 auto; width: 600px; text-align: left;}
+	
+	#foot {float: right; text-align: right;}
+	
+	
+	/* *** Basic styling elements -- just to be sure *** */
+	em, i     {font-style:  italic;}
+	strong, b {font-weight: bold;}
+	
+	
+	/* *** Get back to boring fonts *** */
+	.plaintext {
+		font-style:  normal;
+		font-size:   medium;
+		font-weight: normal;
+	}
+	
+	dt { font-weight: bold; }
+	
+	/* *** An <h3> ala Safari 3.2.1 which can be found at:
+	file:///System/Library/Frameworks/WebKit.framework/Versions/A/Frameworks/WebCore.framework/Versions/A/Resources/html4.css
+	file:///System/Library/Frameworks/WebKit.framework/Versions/A/Frameworks/WebCore.framework/Versions/A/Resources/quirks.css
+	
+    N.B. the -khtml stuff and __qem stuff aren't officially valid. Need to check on other browsers
+    */
+	h1 {
+		display: block;
+		font-size: 1.17em;
+		margin: 1__qem 0 1em 0;
+		font-weight: bold;
+	}
+    
+	/* *** generic x/html style, for pedantry's sake *** */
+	html   {display: block;}
+	head   {display: none;}
+	meta   {display: none;}
+	title  {display: none;}
+	link   {display: none;}
+	style  {display: none;}
+	script {display: none;}
+	body   {display: block; margin: 8px;}
+	p      {display: block; margin: 1.0__qem 0px;}
+	div    {display: block;}
+	
+	/* *** Definition lists, pseudo <h1> + <span.plaintext> *** */
+	dl { display: block; margin: 1__qem 0 1em 0; }
+	dt { display: inline; }
+	dd { display: block; margin: 0 0 1em 0; -khtml-margin-start: 40px; }
+	/* dd:before { content: "—"; } *** to add text in by default,
+	       needs to be literal em-dash or what have you, not an entity */
+	
+	/* *** (Un)ordered lists ala Safari *** */
+	ul {
+		display: block;
+		list-style-type: disc;
+		margin: 1__qem 0 1em 0;
+		-khtml-padding-start: 40px
+	}
+	ol {
+		display: block;
+		list-style-type: decimal;
+		margin: 1__qem 0 1em 0;
+		-khtml-padding-start: 40px
+	}
+	li                                     {display: list-item;}
+	ul ul,    ol ul                        {list-style-type: circle;}
+	ol ol ul, ol ul ul, ul ol ul, ul ul ul {list-style-type: square;}
+	ol ul,    ul ol,    ul ul,    ol ol    {margin-top: 0; margin-bottom: 0;}
+}

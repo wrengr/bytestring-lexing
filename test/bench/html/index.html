@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="stylesheet" type="text/css" href="undohtml.css" />
+<link rel="stylesheet" type="text/css" href="index.css" />
+<title>bytestring-lexing benchmarks</title>
+</head>
+<body>
+<div id="main">
+    <hr />
+    <h1>bytestring-lexing benchmarks</h1>
+    <p>This page is a table of contents for browsing some of the benchmarks for the bytestring-lexing package. First, a description of the machines these benchmarks have been run on. If you would like to add yourself to the list below, just send me your Criterion report and the specs for your system.</p>
+    <dl>
+        <dt>semiramis</dt>
+            <dd>OS X 10.5.8, Intel Core 2 Duo 2.8GHz, GHC 6.12.1 (32-bit)</dd>
+        <dt>megadodo</dt>
+            <dd>Linux 64-bit, AMD Phenom x6 3.6GHz, GHC 7.0.4</dd>
+        <dt>bistromath</dt>
+            <dd>Linux 64-bit, Intel Core 2 E-8500 3.16GHz, GHC 7.0.4</dd>
+        <dt>bistromath-win32</dt>
+            <dd>Windows XP 32-bit, Intel Core 2 E-8500 3.16GHz, GHC 7.0.4</dd>
+    </dl>
+    <h1>BenchReadDecimal.hs</h1>
+    <p>N.B., the naming convention for the candidate implementations changed significantly between version 0.3 and 0.4. The old benchmarks are retained primarily to show the differences between different architectures running 64-bit Linux, as well as between the same architecture running under different operating systems.</p>
+    <ul>
+        <li>bytestring-lexing-0.3.0:
+            <span style="text-decoration: line-through;">[semiramis]</span>
+            <a href="readDecimal-0.3.0_megadodo.html">[megadodo]</a>
+            <a href="readDecimal-0.3.0_bistromath.html">[bistromath]</a>
+            <a href="readDecimal-0.3.0_bistromath-win32.html">[bistromath-win32]</a></li>
+        <li>bytestring-lexing-0.4.0:
+            <a href="readDecimal-0.4.0_semiramis.html">[semiramis]</a>
+            <a href="readDecimal-0.4.0_megadodo.html">[megadodo]</a></li>
+    </ul>
+    <hr />
+    <div id="foot"><i>This page modified sometime since 2012.02.03</i></div>
+</div>
+</body>
+</html>

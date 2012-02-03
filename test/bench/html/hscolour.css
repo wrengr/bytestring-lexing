@@ -1,0 +1,11 @@
+/* From Hackage, since our local install doesn't seem to generate
+ * this
+ * N.B. the class names changed in some recent version to add "hs-"
+ * at the beginning of everything
+ */
+
+.hs-keyglyph, .hs-layout {color: red;}
+.hs-keyword {color: blue;}
+.hs-comment, .hs-comment a {color: green;}
+.hs-str, .hs-chr {color: teal;}
+.hs-keyword, .hs-conid, .hs-varid, .hs-conop, .hs-varop, .hs-num, .hs-cpp, .hs-sel, .hs-definition {}
