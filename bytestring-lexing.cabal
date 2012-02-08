@@ -1,28 +1,35 @@
 ----------------------------------------------------------------
--- wren ng thornton <wren@community.haskell.org>    ~ 2012.02.03
+-- wren ng thornton <wren@community.haskell.org>    ~ 2012.02.08
 ----------------------------------------------------------------
 
-Name:           bytestring-lexing
-Version:        0.4.0
--- Source-Repository requires version 1.6
+-- By and large Cabal >=1.2 is fine; but >= 1.6 gives tested-with:
+-- and source-repository:.
 Cabal-Version:  >= 1.6
 Build-Type:     Simple
+
+Name:           bytestring-lexing
+Version:        0.4.0.1
 Stability:      provisional
+Homepage:       http://code.haskell.org/~wren/
+Author:         wren ng thornton, Don Stewart
+Maintainer:     wren@community.haskell.org
 Copyright:      Copyright (c) 2012 wren ng thornton, 2008--2011 Don Stewart
 License:        BSD3
 License-File:   LICENSE
-Author:         wren ng thornton, Don Stewart
-Maintainer:     wren@community.haskell.org
-Homepage:       http://code.haskell.org/~wren/
+
 Category:       Data
-Synopsis:       Parse and produce literals efficiently from strict or lazy bytestrings.
+Synopsis:
+    Parse and produce literals efficiently from strict or lazy bytestrings.
 Description:
     Parse and produce literals efficiently from strict or lazy bytestrings.
     .
-    Some benchmarks for this package can be found at: <http://community.haskell.org/~wren/bytestring-lexing/test/bench/html>
+    Some benchmarks for this package can be found at:
+    <http://community.haskell.org/~wren/bytestring-lexing/test/bench/html>
 
-Extra-source-files: AUTHORS, README, VERSION
-Tested-With: GHC ==6.8.2, GHC ==6.10.1, GHC ==6.12.1, GHC ==7.0.3
+Tested-With:
+    GHC ==6.8.2, GHC ==6.10.1, GHC ==6.12.1, GHC ==7.0.3
+Extra-source-files:
+    AUTHORS, README, VERSION
 Source-Repository head
     Type:     darcs
     Location: http://community.haskell.org/~wren/bytestring-lexing
