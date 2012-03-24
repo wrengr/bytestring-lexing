@@ -1,4 +1,6 @@
-0.4.0 (2012.00.00):
+0.4.1 (2012.00.00):
+    - Data.ByteString.Lex.Integral: Added buffer overflow check for asHexadecimal
+0.4.0 (2012.02.03):
     - Data.ByteString.Lex.Integral: added readDecimal_
 
 0.3.0 (2012.01.28):

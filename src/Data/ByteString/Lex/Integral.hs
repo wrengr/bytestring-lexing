@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 ----------------------------------------------------------------
---                                                    2012.01.31
+--                                                    2012.02.24
 -- |
 -- Module      :  Data.ByteString.Lex.Integral
 -- Copyright   :  Copyright (c) 2010--2012 wren ng thornton
@@ -479,10 +479,13 @@ unsafePackHexadecimal n0 =
 asHexadecimal :: ByteString -> ByteString
 asHexadecimal = start
     where
-    start buf =
-        BSI.unsafeCreate (2 * BS.length buf) $ \p0 -> do
-            _ <- foldIO step p0 buf
-            return () -- needed for type checking
+    start buf
+        | BS.length buf > maxBound `quot` 2 =
+            error _asHexadecimal_overflow
+        | otherwise =
+            BSI.unsafeCreate (2 * BS.length buf) $ \p0 -> do
+                _ <- foldIO step p0 buf
+                return () -- needed for type checking
     
     step :: Ptr Word8 -> Word8 -> IO (Ptr Word8)
     step p w
@@ -492,6 +495,11 @@ asHexadecimal = start
             poke   p     (BSU.unsafeIndex hexDigits ((ix .&. 0xF0) `shiftR` 4))
             poke   (p `plusPtr` 1) (BSU.unsafeIndex hexDigits  (ix .&. 0x0F))
             return (p `plusPtr` 2)
+
+_asHexadecimal_overflow :: String
+{-# NOINLINE _asHexadecimal_overflow #-}
+_asHexadecimal_overflow =
+    "asHexadecimal: cannot create buffer larger than (maxBound::Int)"
 
 
 -- TODO: benchmark against the magichash hack used in Warp.
@@ -672,6 +680,7 @@ numDigits :: Integer -> Integer -> Int
 numDigits b0 n0
     | b0 <= 1   = error _numDigits_nonpositiveBase
     | n0 <  0   = error _numDigits_negativeNumber
+    -- BUG: need to check n0 to be sure we won't overflow Int
     | otherwise = 1 + fst (ilog b0 n0)
     where
     ilog b n
@@ -701,6 +710,7 @@ twoPowerNumDigits p n0
     | p  <= 0   = error _twoPowerNumDigits_nonpositiveBase
     | n0 <  0   = error _twoPowerNumDigits_negativeNumber
     | n0 == 0   = 1
+    -- BUG: need to check n0 to be sure we won't overflow Int
     | otherwise = go 0 n0
     where
     go d n
