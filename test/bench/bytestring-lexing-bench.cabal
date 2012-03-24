@@ -1,9 +1,9 @@
 ----------------------------------------------------------------
--- wren ng thornton <wren@community.haskell.org>    ~ 2012.01.31
+-- wren ng thornton <wren@community.haskell.org>    ~ 2012.03.24
 ----------------------------------------------------------------
 
 Name:           bytestring-lexing-bench
-Version:        0.7.0
+Version:        0.8.0
 Cabal-Version:  >= 1.2
 Build-Type:     Simple
 Stability:      debugging
@@ -18,7 +18,7 @@ Synopsis:       Microbenchmarking for common functions.
 Description:    Microbenchmarking for common functions.
 
 -- To run all the benchmarks with criterion>=0.6 do:
--- for b in isSpace numDigits packDecimal readDecimal ; do
+-- for b in isSpace numDigits packDecimal readDecimal ceilEightThirds ; do
 --     ./dist/build/bench-${b}/bench-${b} -o ${b}.html ; done && open *.html
 
 ----------------------------------------------------------------
@@ -109,6 +109,19 @@ Executable bench-packDecimal
         Build-Depends: base >= 2.0 && < 2.2
     else
         Build-Depends: base < 2.0 || >= 3, bytestring
+
+----------------------------------------------------------------
+-- | Benchmark different implementations of the @ceilEightThirds@ function.
+Executable bench-ceilEightThirds
+    Main-Is:        BenchCeilEightThirds.hs
+    GHC-Options:    -main-is BenchCeilEightThirds.main
+    Build-Depends:  criterion  >= 0.5.0
+                 ,  QuickCheck >= 2.4.1
+    
+    if flag(base4)
+        Build-Depends: base >= 4 && < 5
+    else
+        Build-Depends: base < 4
 
 ----------------------------------------------------------------
 ----------------------------------------------------------- fin.

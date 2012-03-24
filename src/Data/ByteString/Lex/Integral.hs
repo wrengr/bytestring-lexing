@@ -605,14 +605,6 @@ unsafePackOctal n0 =
 
 
 {-
--- @ceilEightThirds x == ceiling (fromIntegral x * 8 / 3)@
-ceilEightThirds :: Nat -> Nat
-ceilEightThirds (Nat# x)
-    | 0 == r    = Nat# q
-    | otherwise = Nat# (q+1)
-    where
-    (q,r) = (x * 8) `quotRem` 3
-
 asOctal :: ByteString -> ByteString
 asOctal buf =
     BSI.unsafeCreate (ceilEightThirds $ BS.length buf) $ \p0 -> do
@@ -629,6 +621,21 @@ asOctal buf =
             loop p0 (q0 `plusPtr` off)
 
             {- N.B., @BSU.unsafeIndex octDigits == (0x30 +)@ -}
+    where
+    -- See the benchmark file for credits and implementation details.
+    ceilEightThirds x
+        | x >= 3*(b-1) = error _asOctal_overflow
+        | x >= b       = ceiling (fromIntegral x / 3 * 8)
+        | otherwise    = (x*8 + 2) `quot` 3
+        where
+        {-# INLINE b #-}
+        b = 2^28 -- b*8-1 is the last positive number for Int=Int32
+        -- TODO: need to generalize for Int=Int64
+
+_asOctal_overflow :: String
+{-# NOINLINE _asOctal_overflow #-}
+_asOctal_overflow =
+    "asOctal: cannot create buffer larger than (maxBound::Int)"
 -}
 
 ----------------------------------------------------------------
