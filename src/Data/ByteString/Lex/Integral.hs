@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 ----------------------------------------------------------------
---                                                    2012.02.24
+--                                                    2012.03.24
 -- |
 -- Module      :  Data.ByteString.Lex.Integral
 -- Copyright   :  Copyright (c) 2010--2012 wren ng thornton
@@ -30,7 +30,7 @@ module Data.ByteString.Lex.Integral
     -- * Octal conversions
     , readOctal
     , packOctal
-    -- TODO: asOctal -- this will be hard to make really efficient...
+    -- asOctal -- this will be really hard to make efficient...
     ) where
 
 import           Data.ByteString          (ByteString)
@@ -611,40 +611,75 @@ unsafePackOctal n0 =
             poke p (0x30 + fromIntegral r)
             loop q (p `plusPtr` negate 1)
 
-
 {-
+-- BUG: This doesn't quite work right...
 asOctal :: ByteString -> ByteString
 asOctal buf =
     BSI.unsafeCreate (ceilEightThirds $ BS.length buf) $ \p0 -> do
         let (BSI.PS fq off len) = buf
         FFI.withForeignPtr fq $ \q0 -> do
             let qF = q0 `plusPtr` (off + len - rem len 3)
-            let loop p q
-                    | q == qF   = ...{- Handle the last one or two Word8 -}
-                    | otherwise = do
-                        ...{- Take three Word8 and write 8 chars  at a time -}
-                        -- Cf. the @word24@ package
+            let loop :: Ptr Word8 -> Ptr Word8 -> IO ()
+                loop p q
+                    | q /= qF   = do
+                        {- Take three Word8s and write 8 chars at a time -}
+                        i <- peek q
+                        j <- peek (q `plusPtr` 1) :: IO Word8
+                        k <- peek (q `plusPtr` 2) :: IO Word8
+                        let w =     fromIntegral i
+                                .|. (fromIntegral j `shiftL` 8)
+                                .|. (fromIntegral k `shiftL` 16)
+                        poke p               (toC8( w              .&. 0x07))
+                        poke (p `plusPtr` 1) (toC8((w `shiftR`  3) .&. 0x07))
+                        poke (p `plusPtr` 2) (toC8((w `shiftR`  6) .&. 0x07))
+                        poke (p `plusPtr` 3) (toC8((w `shiftR`  9) .&. 0x07))
+                        poke (p `plusPtr` 4) (toC8((w `shiftR` 12) .&. 0x07))
+                        poke (p `plusPtr` 5) (toC8((w `shiftR` 15) .&. 0x07))
+                        poke (p `plusPtr` 6) (toC8((w `shiftR` 18) .&. 0x07))
+                        poke (p `plusPtr` 7) (toC8((w `shiftR` 21) .&. 0x07))
                         loop (p `plusPtr` 8) (q `plusPtr` 3)
-            
+                    | 2 == rem len 3 = do
+                        {- Handle the last two Word8s -}
+                        i <- peek q
+                        j <- peek (q `plusPtr` 1) :: IO Word8
+                        let w =      fromIntegral i
+                                .|. (fromIntegral j `shiftL` 8)
+                        poke p               (toC8( w              .&. 0x07))
+                        poke (p `plusPtr` 1) (toC8((w `shiftR`  3) .&. 0x07))
+                        poke (p `plusPtr` 2) (toC8((w `shiftR`  6) .&. 0x07))
+                        poke (p `plusPtr` 3) (toC8((w `shiftR`  9) .&. 0x07))
+                        poke (p `plusPtr` 4) (toC8((w `shiftR` 12) .&. 0x07))
+                        poke (p `plusPtr` 5) (toC8((w `shiftR` 15) .&. 0x01))
+                    | otherwise = do
+                        {- Handle the last Word8 -}
+                        i <- peek q
+                        let w = fromIntegral i
+                        poke p               (toC8( w              .&. 0x07))
+                        poke (p `plusPtr` 1) (toC8((w `shiftR`  3) .&. 0x07))
+                        poke (p `plusPtr` 2) (toC8((w `shiftR`  6) .&. 0x03))
+            --
             loop p0 (q0 `plusPtr` off)
-
-            {- N.B., @BSU.unsafeIndex octDigits == (0x30 +)@ -}
     where
+    toC8 :: Int -> Word8
+    toC8 i = fromIntegral (0x30+i)
+    {-# INLINE toC8 #-}
+    -- We can probably speed that up by using (.|.) in lieu of (+)
+    
     -- See the benchmark file for credits and implementation details.
     ceilEightThirds x
         | x >= 3*(b-1) = error _asOctal_overflow
-        | x >= b       = ceiling (fromIntegral x / 3 * 8)
+        | x >= b       = ceiling (fromIntegral x / 3 * 8 :: Double)
         | otherwise    = (x*8 + 2) `quot` 3
         where
         {-# INLINE b #-}
-        b = 2^28 -- b*8-1 is the last positive number for Int=Int32
+        b = 2^(28::Int)::Int -- b*8-1 is the last positive number for Int=Int32
         -- TODO: need to generalize for Int=Int64
 
 _asOctal_overflow :: String
 {-# NOINLINE _asOctal_overflow #-}
 _asOctal_overflow =
     "asOctal: cannot create buffer larger than (maxBound::Int)"
--}
+-- -}
 
 ----------------------------------------------------------------
 ----------------------------------------------------------------
