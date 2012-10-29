@@ -203,5 +203,33 @@ main = defaultMain
         ]
     ]
 
+{- -- https://gist.github.com/3967761
+sophocles :: String
+sophocles = "Ἰοὺ ἰού· τὰ πάντʼ ἂν ἐξήκοι σαφῆ.\nὮ φῶς, τελευταῖόν σε προσϐλέψαιμι νῦν,\nὅστις πέφασμαι φύς τʼ ἀφʼ ὧν οὐ χρῆν, ξὺν οἷς τʼ\nοὐ χρῆν ὁμιλῶν, οὕς τέ μʼ οὐκ ἔδει κτανών.\nἸοὺ ἰού· τὰ πάντʼ ἂν ἐξήκοι σαφῆ.\nὮ φῶς, τελευταῖόν σε προσϐλέψαιμι νῦν,\nὅστις πέφασμαι φύς τʼ ἀφʼ ὧν οὐ χρῆν, ξὺν οἷς τʼ\nοὐ χρῆν ὁμιλῶν, οὕς τέ μʼ οὐκ ἔδει κτανών."
+
+lorem :: String
+lorem = "Lorem ipsum dolor sit amet, consectetur adipisicing elit,\nsed do eiusmod tempor incididunt ut labore et\ndolore magna aliqua. Ut enim ad minim veniam,\nquis nostrud exercitation ullamco laboris nisi ut\naliquip ex ea commodo consequat. Duis aute irure dolor\nin reprehenderit in voluptate velit esse cillum dolore\neu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,\nsunt in culpa qui officia deserunt mollit anim id est laborum.\n"
+
+haskell :: String
+haskell = "isSpace_DataChar :: Char -> Bool\n{-# INLINE isSpace_DataChar #-}\n  isSpace_DataChar c =\n     c == ' '     ||\n     c == '\t'    ||\n     c == '\n'    ||\n     c == '\r'    ||\n     c == '\f'    ||\n\tc == '\v'    ||\n\tc == '\xa0'  ||\n\tiswspace (fromIntegral (C.ord c)) /= 0\nisSpace_DataChar :: Char -> Bool\n{-# INLINE isSpace_DataChar #-}\n  isSpace_DataChar c =\n     c == ' '     ||\n     c == '\t'    ||\n     c == '\n'    ||\n     c == '\r'    ||\n     c == '\f'    ||\n\tc == '\v'    ||\n\tc == '\xa0'  ||\n\tiswspace (fromIntegral (C.ord c)) /= 0\n"
+
+main :: IO ()
+main = defaultMain
+    [ group "ascii text" lorem
+    , group "Greek text" sophocles
+    , group "Haskell code" haskell
+    , group "chars 0..255" ['\0'..'\255']
+    , group "all spaces" $ concat $ replicate 50 "\t\r\n\n "
+    ]
+
+group :: String -> String -> Benchmark
+group name inp = bgroup name
+        [ bench "isSpace_DataChar" $ nf (map isSpace_DataChar) inp
+        , bench "isSpace_Pattern"  $ nf (map isSpace_Pattern)  inp
+        , bench "isSpace_Alt"      $ nf (map isSpace_Alt)      inp
+        , bench "isSpace_Alt'"     $ nf (map isSpace_Alt')     inp
+        ]
+-}
+
 ----------------------------------------------------------------
 ----------------------------------------------------------- fin.
