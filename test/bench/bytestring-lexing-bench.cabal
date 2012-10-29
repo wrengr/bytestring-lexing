@@ -1,9 +1,9 @@
 ----------------------------------------------------------------
--- wren ng thornton <wren@community.haskell.org>    ~ 2012.03.24
+-- wren ng thornton <wren@community.haskell.org>    ~ 2012.10.28
 ----------------------------------------------------------------
 
 Name:           bytestring-lexing-bench
-Version:        0.8.0
+Version:        0.9.0
 Cabal-Version:  >= 1.2
 Build-Type:     Simple
 Stability:      debugging
