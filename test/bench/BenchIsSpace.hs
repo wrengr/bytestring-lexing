@@ -118,7 +118,7 @@ isSpace_fiddlosopher c
     | c >= '\t' && c <= '\r' = True
     | c == '\xA0'            = True -- -> -- BUG: syntax hilighting fail
     | otherwise              = iswspace (fromIntegral (C.ord c)) /= 0
-    
+
 -- | A variation on the theme of 'isSpace_fiddlosopher'.
 isSpace_fiddlosopher' :: Char -> Bool
 {-# INLINE isSpace_fiddlosopher' #-}
