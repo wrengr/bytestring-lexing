@@ -1,9 +1,9 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 ----------------------------------------------------------------
---                                                    2012.03.24
+--                                                    2013.03.20
 -- |
 -- Module      :  Data.ByteString.Lex.Integral
--- Copyright   :  Copyright (c) 2010--2012 wren ng thornton
+-- Copyright   :  Copyright (c) 2010--2013 wren ng thornton
 -- License     :  BSD3
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  provisional
@@ -92,7 +92,7 @@ readDecimalSimple = start
             w | 0x39 >= w && w >= 0x30 ->
                     Just $ loop (fromIntegral (w - 0x30)) (BSU.unsafeTail xs)
               | otherwise -> Nothing
-    
+
     loop n xs
         | n `seq` xs `seq` False = undefined -- for strictness analysis
         | BS.null xs = (n, BS.empty)         -- not @xs@, to help GC
@@ -131,15 +131,16 @@ readDecimal = start
     isDecimal :: Word8 -> Bool
     {-# INLINE isDecimal #-}
     isDecimal w = 0x39 >= w && w >= 0x30
-    
+
     toDigit :: Integral a => Word8 -> a
     {-# INLINE toDigit #-}
     toDigit w = fromIntegral (w - 0x30)
-    
+
     addDigit :: Int -> Word8 -> Int
     {-# INLINE addDigit #-}
     addDigit n w = n * 10 + toDigit w
     
+    -- TODO: should we explicitly drop all leading zeros before we jump into the unrolled loop?
     start :: Integral a => ByteString -> Maybe (a, ByteString)
     start xs
         | BS.null xs = Nothing
@@ -147,7 +148,7 @@ readDecimal = start
             case BSU.unsafeHead xs of
             w | isDecimal w -> Just $ loop0 (toDigit w) (BSU.unsafeTail xs)
               | otherwise   -> Nothing
-    
+
     loop0 :: Integral a => a -> ByteString -> (a, ByteString)
     loop0 m xs
         | m `seq` xs `seq` False = undefined
@@ -156,7 +157,7 @@ readDecimal = start
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop1 m (toDigit w) (BSU.unsafeTail xs)
               | otherwise   -> (m, xs)
-    
+
     loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8
         :: Integral a => a -> Int -> ByteString -> (a, ByteString)
     loop1 m n xs
@@ -242,22 +243,22 @@ readDecimal_ = start
     isDecimal :: Word8 -> Bool
     {-# INLINE isDecimal #-}
     isDecimal w = 0x39 >= w && w >= 0x30
-    
+
     toDigit :: Integral a => Word8 -> a
     {-# INLINE toDigit #-}
     toDigit w = fromIntegral (w - 0x30)
-    
+
     addDigit :: Int -> Word8 -> Int
     {-# INLINE addDigit #-}
     addDigit n w = n * 10 + toDigit w
-    
+
     start xs
         | BS.null xs = 0
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop0 (toDigit w) (BSU.unsafeTail xs)
               | otherwise   -> 0
-    
+
     loop0 :: Integral a => a -> ByteString -> a
     loop0 m xs
         | m `seq` xs `seq` False = undefined
@@ -266,7 +267,7 @@ readDecimal_ = start
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop1 m (toDigit w) (BSU.unsafeTail xs)
               | otherwise   -> m
-    
+
     loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8
         :: Integral a => a -> Int -> ByteString -> a
     loop1 m n xs
@@ -338,7 +339,9 @@ packDecimal n
     | otherwise = Just (unsafePackDecimal n)
 
 
--- Beware the overflow issues of 'numDigits', noted at bottom.
+-- This implementation is modified from:
+-- <http://www.serpentine.com/blog/2013/03/20/whats-good-for-c-is-good-for-haskell/>
+--
 -- | Convert a non-negative integer into an (unsigned) ASCII decimal
 -- string. This function is unsafe to use on negative inputs.
 unsafePackDecimal :: (Integral a) => a -> ByteString
@@ -355,22 +358,36 @@ unsafePackDecimal :: (Integral a) => a -> ByteString
     Word32  -> ByteString,
     Word64  -> ByteString #-}
 unsafePackDecimal n0 =
-    let size = numDigits 10 (toInteger n0)
-    in  BSI.unsafeCreate size $ \p0 ->
-            loop n0 (p0 `plusPtr` (size - 1))
+    let size = numDecimalDigits n0
+    in  BSI.unsafeCreate size $ \p0 -> loop n0 (p0 `plusPtr` (size - 1))
     where
-    loop :: (Integral a) => a -> Ptr Word8 -> IO ()
+    getDigit = BSU.unsafeIndex packDecimal_digits
+
     loop n p
         | n `seq` p `seq` False = undefined -- for strictness analysis
-        | n <= 9    = do
-            poke p (0x30 + fromIntegral n)
+        | n >= 100  = do
+            let (q,r) = n `quotRem` 100
+            write2 r p
+            loop   q (p `plusPtr` negate 2)
+        | n >= 10   = write2 n p
+        | otherwise = poke p (0x30 + fromIntegral n)
+    
+    write2 i0 p
+        | i0 `seq` p `seq` False = undefined -- for strictness analysis
         | otherwise = do
-            -- quotRem == divMod when both @n@ and @b@ are positive,
-            -- but 'quotRem' is often faster (for Int it's one machine-op!)
-            let (q,r) = n `quotRem` 10
-            poke p (0x30 + fromIntegral r)
-            loop q (p `plusPtr` negate 1)
+            let i = fromIntegral i0; j = i + i
+            poke p                      (getDigit $! j + 1)
+            poke (p `plusPtr` negate 1) (getDigit j)
 
+packDecimal_digits :: ByteString
+{-# NOINLINE packDecimal_digits #-}
+packDecimal_digits = BS8.pack
+    "0001020304050607080910111213141516171819\
+    \2021222324252627282930313233343536373839\
+    \4041424344454647484950515253545556575859\
+    \6061626364656667686970717273747576777879\
+    \8081828384858687888990919293949596979899"
+    -- BUG: syntax highlighting fail: ->
 
 ----------------------------------------------------------------
 ----------------------------------------------------------------
@@ -404,7 +421,7 @@ readHexadecimal = start
     -- TODO: Would it be worth trying to do the magichash trick
     -- used by Warp here? It'd really help remove branch prediction
     -- issues etc.
-    -- 
+    --
     -- Beware the urge to make this code prettier, cf 'readDecimal'.
     start xs
         | BS.null xs = Nothing
@@ -417,7 +434,7 @@ readHexadecimal = start
               | 0x66 >= w && w >= 0x61 ->
                     Just $ loop (fromIntegral (w-0x61+10)) (BSU.unsafeTail xs)
               | otherwise -> Nothing
-    
+
     loop n xs
         | n `seq` xs `seq` False = undefined -- for strictness analysis
         | BS.null xs = (n, BS.empty)         -- not @xs@, to help GC
@@ -457,7 +474,7 @@ unsafePackHexadecimal :: (Integral a) => a -> ByteString
     Word32  -> ByteString,
     Word64  -> ByteString #-}
 unsafePackHexadecimal n0 =
-    let size = twoPowerNumDigits 4 (toInteger n0) -- for Bits
+    let size = numTwoPowerDigits 4 (toInteger n0) -- for Bits
     in  BSI.unsafeCreate size $ \p0 ->
             loop n0 (p0 `plusPtr` (size - 1))
     where
@@ -486,7 +503,7 @@ asHexadecimal = start
             BSI.unsafeCreate (2 * BS.length buf) $ \p0 -> do
                 _ <- foldIO step p0 buf
                 return () -- needed for type checking
-    
+
     step :: Ptr Word8 -> Word8 -> IO (Ptr Word8)
     step p w
         | p `seq` w `seq` False = undefined -- for strictness analysis
@@ -562,7 +579,7 @@ readOctal = start
             w | 0x37 >= w && w >= 0x30 ->
                     Just $ loop (fromIntegral (w - 0x30)) (BSU.unsafeTail xs)
               | otherwise -> Nothing
-    
+
     loop n xs
         | n `seq` xs `seq` False = undefined -- for strictness analysis
         | BS.null xs = (n, BS.empty)         -- not @xs@, to help GC
@@ -598,7 +615,7 @@ unsafePackOctal :: (Integral a) => a -> ByteString
     Word32  -> ByteString,
     Word64  -> ByteString #-}
 unsafePackOctal n0 =
-    let size = twoPowerNumDigits 3 (toInteger n0) -- for Bits
+    let size = numTwoPowerDigits 3 (toInteger n0) -- for Bits
     in  BSI.unsafeCreate size $ \p0 ->
             loop n0 (p0 `plusPtr` (size - 1))
     where
@@ -664,7 +681,7 @@ asOctal buf =
     toC8 i = fromIntegral (0x30+i)
     {-# INLINE toC8 #-}
     -- We can probably speed that up by using (.|.) in lieu of (+)
-    
+
     -- See the benchmark file for credits and implementation details.
     ceilEightThirds x
         | x >= 3*(b-1) = error _asOctal_overflow
@@ -700,7 +717,7 @@ _asOctal_overflow =
 -- to represent the number @n@. N.B., this implementation is unsafe
 -- and will throw errors if the base is @(<= 1)@, or if the number
 -- is negative. If the base happens to be a power of 2, then see
--- 'twoPowerNumDigits' for a more efficient implementation.
+-- 'numTwoPowerDigits' for a more efficient implementation.
 --
 -- We must be careful about the input types here. When using small
 -- unsigned types or very large values, the repeated squaring can
@@ -713,8 +730,8 @@ _asOctal_overflow =
 numDigits :: Integer -> Integer -> Int
 {-# INLINE numDigits #-}
 numDigits b0 n0
-    | b0 <= 1   = error _numDigits_nonpositiveBase
-    | n0 <  0   = error _numDigits_negativeNumber
+    | b0 <= 1   = error (_numDigits ++ _nonpositiveBase)
+    | n0 <  0   = error (_numDigits ++ _negativeNumber)
     -- BUG: need to check n0 to be sure we won't overflow Int
     | otherwise = 1 + fst (ilog b0 n0)
     where
@@ -725,25 +742,17 @@ numDigits b0 n0
         where
         (e, r) = ilog (b*b) n
 
-_numDigits_nonpositiveBase :: String
-{-# NOINLINE _numDigits_nonpositiveBase #-}
-_numDigits_nonpositiveBase = "numDigits: base must be greater than one"
-
-_numDigits_negativeNumber  :: String
-{-# NOINLINE _numDigits_negativeNumber #-}
-_numDigits_negativeNumber  = "numDigits: number must be non-negative"
-
 
 -- | Compute the number of base-@2^p@ digits required to represent a
 -- number @n@. N.B., this implementation is unsafe and will throw
 -- errors if the base power is non-positive, or if the number is
 -- negative. For bases which are not a power of 2, see 'numDigits'
 -- for a more general implementation.
-twoPowerNumDigits :: (Integral a, Bits a) => Int -> a -> Int
-{-# INLINE twoPowerNumDigits #-}
-twoPowerNumDigits p n0
-    | p  <= 0   = error _twoPowerNumDigits_nonpositiveBase
-    | n0 <  0   = error _twoPowerNumDigits_negativeNumber
+numTwoPowerDigits :: (Integral a, Bits a) => Int -> a -> Int
+{-# INLINE numTwoPowerDigits #-}
+numTwoPowerDigits p n0
+    | p  <= 0   = error (_numTwoPowerDigits ++ _nonpositiveBase)
+    | n0 <  0   = error (_numTwoPowerDigits ++ _negativeNumber)
     | n0 == 0   = 1
     -- BUG: need to check n0 to be sure we won't overflow Int
     | otherwise = go 0 n0
@@ -753,15 +762,58 @@ twoPowerNumDigits p n0
         | n > 0     = go (d+1) (n `shiftR` p)
         | otherwise = d
 
-_twoPowerNumDigits_nonpositiveBase :: String
-{-# NOINLINE _twoPowerNumDigits_nonpositiveBase #-}
-_twoPowerNumDigits_nonpositiveBase =
-    "twoPowerNumDigits: base must be positive"
 
-_twoPowerNumDigits_negativeNumber :: String
-{-# NOINLINE _twoPowerNumDigits_negativeNumber #-}
-_twoPowerNumDigits_negativeNumber =
-    "twoPowerNumDigits: number must be non-negative"
+-- This implementation is from:
+-- <http://www.serpentine.com/blog/2013/03/20/whats-good-for-c-is-good-for-haskell/>
+--
+-- | Compute the number of base-@10@ digits required to represent
+-- a number @n@. N.B., this implementation is unsafe and will throw
+-- errors if the number is negative.
+numDecimalDigits :: (Integral a) => a -> Int
+{-# INLINE numDecimalDigits #-}
+numDecimalDigits n0
+    | n0 < 0    = error (_numDecimalDigits ++ _negativeNumber)
+    -- BUG: need to check n0 to be sure we won't overflow Word64
+    | otherwise = go 1 (fromIntegral n0 :: Word64)
+    where
+    fin n bound = if n >= bound then 1 else 0
+    go k n
+        | k `seq` False = undefined -- For strictness analysis
+        | n < 10        = k
+        | n < 100       = k + 1
+        | n < 1000      = k + 2
+        | n < 1000000000000 =
+            k + if n < 100000000
+                then if n < 1000000
+                    then if n < 10000
+                        then 3
+                        else 4 + fin n 100000
+                    else 6 + fin n 10000000
+                else if n < 10000000000
+                    then 8 + fin n 1000000000
+                    else 10 + fin n 100000000000
+        | otherwise = go (k + 12) (n `quot` 1000000000000)
+
+
+_numDigits :: String
+_numDigits = "numDigits"
+{-# NOINLINE _numDigits #-}
+
+_numTwoPowerDigits :: String
+_numTwoPowerDigits = "numTwoPowerDigits"
+{-# NOINLINE _numTwoPowerDigits #-}
+
+_numDecimalDigits :: String
+_numDecimalDigits = "numDecimalDigits"
+{-# NOINLINE _numDecimalDigits #-}
+
+_nonpositiveBase :: String
+_nonpositiveBase = ": base must be greater than one"
+{-# NOINLINE _nonpositiveBase #-}
+
+_negativeNumber :: String
+_negativeNumber = ": number must be non-negative"
+{-# NOINLINE _negativeNumber #-}
 
 ----------------------------------------------------------------
 ----------------------------------------------------------- fin.

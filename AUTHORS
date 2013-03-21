@@ -6,7 +6,8 @@ maintainership was taken over by wren ng thornton. I would also
 like to give thanks to the following contributers:
 
 Bryan O'Sullivan --- For adding support for parsing Doubles from
-    lazy bytestrings back during Don's maintainership.
+    lazy bytestrings back during Don's maintainership. Also for
+    inspiring the improved (v0.4.2) packDecimal implementation.
 
 Erik de Castro Lopo, Vincent Hanquez, and Christoph Breitkopf ---
     for excessive tweaking and benchmarking of the readDecimal
