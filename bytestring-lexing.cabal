@@ -8,7 +8,7 @@ Cabal-Version:  >= 1.6
 Build-Type:     Simple
 
 Name:           bytestring-lexing
-Version:        0.4.2
+Version:        0.4.3
 Stability:      provisional
 Homepage:       http://code.haskell.org/~wren/
 Author:         wren ng thornton, Don Stewart

@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 ----------------------------------------------------------------
---                                                    2013.03.20
+--                                                    2013.03.21
 -- |
 -- Module      :  Data.ByteString.Lex.Integral
 -- Copyright   :  Copyright (c) 2010--2013 wren ng thornton
@@ -772,10 +772,14 @@ numTwoPowerDigits p n0
 numDecimalDigits :: (Integral a) => a -> Int
 {-# INLINE numDecimalDigits #-}
 numDecimalDigits n0
-    | n0 < 0    = error (_numDecimalDigits ++ _negativeNumber)
-    -- BUG: need to check n0 to be sure we won't overflow Word64
-    | otherwise = go 1 (fromIntegral n0 :: Word64)
+    | n0 < 0     = error (_numDecimalDigits ++ _negativeNumber)
+    -- Unfortunately this causes significant (1.2x) slowdown since
+    -- GHC can't see it will always fail for types other than Integer...
+    | n0 > limit = numDigits 10 (toInteger n0)
+    | otherwise  = go 1 (fromIntegral n0 :: Word64)
     where
+    limit = fromIntegral (maxBound :: Word64)
+    
     fin n bound = if n >= bound then 1 else 0
     go k n
         | k `seq` False = undefined -- For strictness analysis

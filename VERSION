@@ -1,3 +1,5 @@
+0.4.3 (2013.03.21):
+    - Data.ByteString.Lex.Integral: Corrected a segmentation fault in packDecimal.
 0.4.2 (2013.03.20):
     - Data.ByteString.Lex.Integral: Improved packDecimal.
 0.4.1 (2012.00.00):

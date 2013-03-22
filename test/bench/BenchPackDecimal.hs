@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 ----------------------------------------------------------------
---                                                    2013.03.20
+--                                                    2013.03.21
 -- |
 -- Module      :  BenchPackDecimal
 -- Copyright   :  Copyright (c) 2011--2013 wren ng thornton
@@ -27,17 +27,21 @@ import qualified Data.ByteString          as BS
 import qualified Data.ByteString.Char8    as BS8 (pack)
 import qualified Data.ByteString.Internal as BSI
 import qualified Data.ByteString.Unsafe   as BSU
-import           Data.Word                (Word8, Word16, Word64)
+import           Data.Word                (Word8, Word64)
 import           Foreign.Ptr              (Ptr, plusPtr)
 import           Foreign.Storable         (poke)
+
+import Data.ByteString.Lex.Integral (packDecimal)
 ----------------------------------------------------------------
 
 main :: IO ()
 main = defaultMain
-    [ bench "packDecimal0" $ nf (seqMap packDecimal0) [0..limit]
-    , bench "packDecimal1" $ nf (seqMap packDecimal1) [0..limit]
-    , bench "packDecimal2" $ nf (seqMap packDecimal2) [0..limit]
-    , bench "packDecimal3" $ nf (seqMap packDecimal3) [0..limit]
+    [ bench "packDecimal0 (naive)"  $ nf (seqMap packDecimal0) [0..limit]
+    , bench "packDecimal1 (v0.4.0)" $ nf (seqMap packDecimal1) [0..limit]
+    , bench "packDecimal2"          $ nf (seqMap packDecimal2) [0..limit]
+    , bench "packDecimal3 (v0.4.2)" $ nf (seqMap packDecimal3) [0..limit]
+    --
+    , bench "packDecimal (current)" $ nf (seqMap packDecimal)  [0..limit]
     ]
     where
     -- BUG: using an upper limit of 2^30 causes OOM failure!!
