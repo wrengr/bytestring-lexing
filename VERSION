@@ -1,3 +1,5 @@
+0.4.3.1 (2014.03.07):
+    - Updated the .cabal file to require newer alex for newer ghc.
 0.4.3 (2013.03.21):
     - Data.ByteString.Lex.Integral: Corrected a segmentation fault in packDecimal.
 0.4.2 (2013.03.20):
