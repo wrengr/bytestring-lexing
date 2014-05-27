@@ -3,7 +3,7 @@
 --                                                    2013.03.21
 -- |
 -- Module      :  BenchPackDecimal
--- Copyright   :  Copyright (c) 2011--2013 wren ng thornton
+-- Copyright   :  Copyright (c) 2011--2013 wren gayle romano
 -- License     :  BSD
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  experimental

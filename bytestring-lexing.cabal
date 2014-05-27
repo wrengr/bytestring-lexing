@@ -1,5 +1,5 @@
 ----------------------------------------------------------------
--- wren ng thornton <wren@community.haskell.org>    ~ 2014.03.30
+-- wren gayle romano <wren@community.haskell.org>   ~ 2014.03.30
 ----------------------------------------------------------------
 
 -- By and large Cabal >=1.2 is fine; but >= 1.6 gives tested-with:
@@ -11,9 +11,9 @@ Name:           bytestring-lexing
 Version:        0.4.3.2
 Stability:      provisional
 Homepage:       http://code.haskell.org/~wren/
-Author:         wren ng thornton, Don Stewart
+Author:         wren gayle romano, Don Stewart
 Maintainer:     wren@community.haskell.org
-Copyright:      Copyright (c) 2012--2014 wren ng thornton, 2008--2011 Don Stewart
+Copyright:      Copyright (c) 2012--2014 wren gayle romano, 2008--2011 Don Stewart
 License:        BSD3
 License-File:   LICENSE
 

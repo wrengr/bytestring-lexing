@@ -4,7 +4,7 @@
 --                                                    2012.01.31
 -- |
 -- Module      :  BenchReadDecimal
--- Copyright   :  Copyright (c) 2010--2012 wren ng thornton,
+-- Copyright   :  Copyright (c) 2010--2012 wren gayle romano,
 --                              2012 Erik de Castro Lopo <erikd@mega-nerd.com>
 -- License     :  BSD3
 -- Maintainer  :  wren@community.haskell.org

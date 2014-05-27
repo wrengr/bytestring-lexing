@@ -2,7 +2,7 @@
 
 The bytestring-lexing package was originally written by Don Stewart
 and released under the terms in the LICENSE file. In January 2012
-maintainership was taken over by wren ng thornton. I would also
+maintainership was taken over by wren gayle romano. I would also
 like to give thanks to the following contributers:
 
 Bryan O'Sullivan --- For adding support for parsing Doubles from

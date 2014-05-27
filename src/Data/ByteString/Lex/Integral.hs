@@ -3,7 +3,7 @@
 --                                                    2013.03.21
 -- |
 -- Module      :  Data.ByteString.Lex.Integral
--- Copyright   :  Copyright (c) 2010--2013 wren ng thornton
+-- Copyright   :  Copyright (c) 2010--2013 wren gayle romano
 -- License     :  BSD3
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  provisional

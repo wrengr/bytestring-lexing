@@ -1,5 +1,5 @@
 ----------------------------------------------------------------
--- wren ng thornton <wren@community.haskell.org>    ~ 2013.03.21
+-- wren gayle romano <wren@community.haskell.org>   ~ 2013.03.21
 ----------------------------------------------------------------
 
 Name:           bytestring-lexing-bench
@@ -7,10 +7,10 @@ Version:        0.10.0
 Cabal-Version:  >= 1.2
 Build-Type:     Simple
 Stability:      debugging
-Copyright:      Copyright (c) 2010--2013 wren ng thornton
+Copyright:      Copyright (c) 2010--2013 wren gayle romano
 License:        BSD3
 License-File:   ../../LICENSE
-Author:         wren ng thornton
+Author:         wren gayle romano
 Maintainer:     wren@community.haskell.org
 Homepage:       http://code.haskell.org/~wren/
 Category:       Data

@@ -5,7 +5,7 @@
 --                                                    2011.05.30
 -- |
 -- Module      :  BenchNumDigits
--- Copyright   :  Copyright (c) 2011--2012 wren ng thornton
+-- Copyright   :  Copyright (c) 2011--2012 wren gayle romano
 -- License     :  BSD
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  experimental
