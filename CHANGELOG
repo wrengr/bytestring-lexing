@@ -1,3 +1,5 @@
+0.4.3.3 (2015-05-30):
+    - Moved VERSION to CHANGELOG
 0.4.3.1 (2014.03.07):
     - Updated the .cabal file to require newer alex for newer ghc.
 0.4.3 (2013.03.21):
