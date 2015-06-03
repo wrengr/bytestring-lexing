@@ -56,6 +56,8 @@ justPair x y
 {-# INLINE justPair #-}
 
 
+-- NOTE: We use 'fromInteger' everywhere instead of 'fromIntegral' in order to fix the types of the calls to 'I.readDecimal', etc. This is always correct, but for some result types there are other intermediate types which may be faster.
+
 ----------------------------------------------------------------
 ----- Decimal
 
@@ -70,17 +72,17 @@ readDecimal :: (Fractional a) => ByteString -> Maybe (a, ByteString)
     ByteString -> Maybe (Double,   ByteString),
     ByteString -> Maybe (Rational, ByteString) #-}
 readDecimal xs0 =
-    case I.readDecimal xs0 of -- BUG: defaults to Integer...
+    case I.readDecimal xs0 of
     Nothing -> Nothing
     Just (whole, xs1)
         | BS.null xs1 || 0x2E /= BSU.unsafeHead xs1 ->
-            justPair (fromIntegral whole) xs1
+            justPair (fromInteger whole) xs1
         | otherwise ->
-            case I.readDecimal (BSU.unsafeTail xs1) of -- BUG: defaults to Integer...
-            Nothing          -> justPair (fromIntegral whole) xs1
+            case I.readDecimal (BSU.unsafeTail xs1) of
+            Nothing          -> justPair (fromInteger whole) xs1
             Just (part, xs2) ->
                 let base = 10 ^ (BS.length xs1 - 1 - BS.length xs2)
-                    frac = fromIntegral whole + (fromIntegral part / base)
+                    frac = fromInteger whole + (fromInteger part / base)
                 in justPair frac xs2
 
 ----------------------------------------------------------------
@@ -112,9 +114,9 @@ readHexadecimal :: (Fractional a) => ByteString -> Maybe (a, ByteString)
     ByteString -> Maybe (Double,   ByteString),
     ByteString -> Maybe (Rational, ByteString) #-}
 readHexadecimal xs0 = 
-    case I.readHexadecimal xs0 of -- BUG: defaults to Integer...
+    case I.readHexadecimal xs0 of
     Nothing       -> Nothing
-    Just (n, xs1) -> justPair (fromIntegral n) xs1
+    Just (n, xs1) -> justPair (fromInteger n) xs1
 
 
 -- TODO:
@@ -142,9 +144,9 @@ readOctal :: (Fractional a) => ByteString -> Maybe (a, ByteString)
     ByteString -> Maybe (Double,   ByteString),
     ByteString -> Maybe (Rational, ByteString) #-}
 readOctal xs0 = 
-    case I.readOctal xs0 of -- BUG: defaults to Integer...
+    case I.readOctal xs0 of
     Nothing       -> Nothing
-    Just (n, xs1) -> justPair (fromIntegral n) xs1
+    Just (n, xs1) -> justPair (fromInteger n) xs1
 
 -- TODO:
 -- Convert a non-negative integer into an ASCII octal string.
@@ -174,11 +176,10 @@ readExponential xs0 =
             justPair f xs1
         | otherwise ->
             -- TODO: benchmark the benefit of inlining 'readSigned' here
-            case readSigned I.readDecimal (BSU.unsafeTail xs1) of -- BUG: defaults to Integer...
+            -- BUG: defaults to Integer... using 'fromInteger' on @e@ doesn't help...
+            case readSigned I.readDecimal (BSU.unsafeTail xs1) of
             Nothing       -> justPair f xs1
-            Just (e, xs2) ->
-                let f' = if e >= 0 then f * (10 ^ e) else f / (10 ^ abs e)
-                in justPair f' xs2
+            Just (e, xs2) -> justPair (f * (10 ^^ e)) xs2
 
 ----------------------------------------------------------------
 ----------------------------------------------------------- fin.

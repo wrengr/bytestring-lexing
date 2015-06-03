@@ -38,23 +38,25 @@ justPair x y
 {-# INLINE justPair #-}
 
 -- Version 1 of trying to speed things up. Is 3~3.5x faster than the old Alex version, but still ~1.5x and ~3x slower than BSRead at Float/Double (on the short and long inputs, respectively; the nonlinearity is no doubt due to BSRead's hackery about dropping low-order bits). However, is ~1.3x and ~2x faster(!) than BSRead at Rational
+
+-- NOTE: We use 'fromInteger' everywhere instead of 'fromIntegral' in order to fix the types of the calls to 'BSLex.readDecimal', etc. This is always correct, but for some result types there are other intermediate types which may be faster.
 readDecimal1 :: (Fractional a) => ByteString -> Maybe (a, ByteString)
 {-# SPECIALIZE readDecimal1 ::
     ByteString -> Maybe (Float,    ByteString),
     ByteString -> Maybe (Double,   ByteString),
     ByteString -> Maybe (Rational, ByteString) #-}
 readDecimal1 xs0 =
-    case BSLex.readDecimal xs0 of -- BUG: defaults to Integer...
+    case BSLex.readDecimal xs0 of
     Nothing -> Nothing
     Just (whole, xs1)
         | BS.null xs1 || 0x2E /= BSU.unsafeHead xs1 ->
-            justPair (fromIntegral whole) xs1
+            justPair (fromInteger whole) xs1
         | otherwise ->
-            case BSLex.readDecimal (BSU.unsafeTail xs1) of -- BUG: defaults to Integer...
-            Nothing          -> justPair (fromIntegral whole) xs1
+            case BSLex.readDecimal (BSU.unsafeTail xs1) of
+            Nothing          -> justPair (fromInteger whole) xs1
             Just (part, xs2) ->
                 let base = 10 ^ (BS.length xs1 - 1 - BS.length xs2)
-                    frac = fromIntegral whole + (fromIntegral part / base)
+                    frac = fromInteger whole + (fromInteger part / base)
                 in justPair frac xs2
 
 readExponential1 :: (Fractional a) => ByteString -> Maybe (a, ByteString)
@@ -71,11 +73,10 @@ readExponential1 xs0 =
             justPair f xs1
         | otherwise ->
             -- TODO: benchmark the benefit of inlining 'readSigned' here
-            case BSLex.readSigned BSLex.readDecimal (BSU.unsafeTail xs1) of -- BUG: defaults to Integer...
+            -- BUG: defaults to Integer... using 'fromInteger' on @e@ doesn't help...
+            case BSLex.readSigned BSLex.readDecimal (BSU.unsafeTail xs1) of
             Nothing       -> justPair f xs1
-            Just (e, xs2) ->
-                let f' = if e >= 0 then f * (10 ^ e) else f / (10 ^ abs e)
-                in justPair f' xs2
+            Just (e, xs2) -> justPair (f * (10 ^^ e)) xs2
 
 
 ----------------------------------------------------------------
@@ -121,7 +122,7 @@ fractional_Rational      = unwrap . BSRead.signed  BSRead.fractional
 -- N.B., this test will not work for Rational since it uses the
 -- @i%d@ notation instead of the @d.dEi@ notation.
 --
--- Failures that've showed up over the years: 32.68783, 1.3629411
+-- Failures that've showed up over the years: 32.68783, 1.3629411, 2.864905
 prop_read_show_idempotent
     :: (Fractional a, Ord a, Show a) => (ByteString -> a) -> a -> Bool
 prop_read_show_idempotent freader x =
