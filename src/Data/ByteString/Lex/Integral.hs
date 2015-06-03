@@ -54,7 +54,7 @@ import           Foreign.Storable         (peek, poke)
 -- provide both signed and unsigned versions of the
 -- {read,pack}{Decimal,Octal,Hex} functions...
 
-
+-- TODO: move to somewhere more general, shared by both Integral and Fractional
 -- | Adjust a reading function to recognize an optional leading
 -- sign. As with the other functions, we assume an ASCII-compatible
 -- encoding of the sign characters.
@@ -113,7 +113,7 @@ readDecimalSimple = start
 -- call 'fromIntegral' to perform the conversion at the end. However,
 -- doing this will make your code succeptible to overflow bugs if
 -- the target type is larger than @Int@.
-readDecimal :: Integral a => ByteString -> Maybe (a, ByteString)
+readDecimal :: (Integral a) => ByteString -> Maybe (a, ByteString)
 {-# SPECIALIZE readDecimal ::
     ByteString -> Maybe (Int,     ByteString),
     ByteString -> Maybe (Int8,    ByteString),
@@ -132,7 +132,7 @@ readDecimal = start
     {-# INLINE isDecimal #-}
     isDecimal w = 0x39 >= w && w >= 0x30
 
-    toDigit :: Integral a => Word8 -> a
+    toDigit :: (Integral a) => Word8 -> a
     {-# INLINE toDigit #-}
     toDigit w = fromIntegral (w - 0x30)
 
@@ -141,7 +141,7 @@ readDecimal = start
     addDigit n w = n * 10 + toDigit w
     
     -- TODO: should we explicitly drop all leading zeros before we jump into the unrolled loop?
-    start :: Integral a => ByteString -> Maybe (a, ByteString)
+    start :: (Integral a) => ByteString -> Maybe (a, ByteString)
     start xs
         | BS.null xs = Nothing
         | otherwise  =
@@ -149,7 +149,7 @@ readDecimal = start
             w | isDecimal w -> Just $ loop0 (toDigit w) (BSU.unsafeTail xs)
               | otherwise   -> Nothing
 
-    loop0 :: Integral a => a -> ByteString -> (a, ByteString)
+    loop0 :: (Integral a) => a -> ByteString -> (a, ByteString)
     loop0 m xs
         | m `seq` xs `seq` False = undefined
         | BS.null xs = (m, BS.empty)
@@ -159,7 +159,7 @@ readDecimal = start
               | otherwise   -> (m, xs)
 
     loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8
-        :: Integral a => a -> Int -> ByteString -> (a, ByteString)
+        :: (Integral a) => a -> Int -> ByteString -> (a, ByteString)
     loop1 m n xs
         | m `seq` n `seq` xs `seq` False = undefined
         | BS.null xs = (m*10 + fromIntegral n, BS.empty)
@@ -225,7 +225,7 @@ readDecimal = start
 -- the string, and returns @0@ instead of @Nothing@. This is twice
 -- as fast for 'Int64' on 32-bit systems, but has identical performance
 -- to 'readDecimal' for all other types and architectures.
-readDecimal_ :: Integral a => ByteString -> a
+readDecimal_ :: (Integral a) => ByteString -> a
 {-# SPECIALIZE readDecimal_ ::
     ByteString -> Int,
     ByteString -> Int8,
@@ -244,7 +244,7 @@ readDecimal_ = start
     {-# INLINE isDecimal #-}
     isDecimal w = 0x39 >= w && w >= 0x30
 
-    toDigit :: Integral a => Word8 -> a
+    toDigit :: (Integral a) => Word8 -> a
     {-# INLINE toDigit #-}
     toDigit w = fromIntegral (w - 0x30)
 
@@ -259,7 +259,7 @@ readDecimal_ = start
             w | isDecimal w -> loop0 (toDigit w) (BSU.unsafeTail xs)
               | otherwise   -> 0
 
-    loop0 :: Integral a => a -> ByteString -> a
+    loop0 :: (Integral a) => a -> ByteString -> a
     loop0 m xs
         | m `seq` xs `seq` False = undefined
         | BS.null xs = m
@@ -269,7 +269,7 @@ readDecimal_ = start
               | otherwise   -> m
 
     loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8
-        :: Integral a => a -> Int -> ByteString -> a
+        :: (Integral a) => a -> Int -> ByteString -> a
     loop1 m n xs
         | m `seq` n `seq` xs `seq` False = undefined
         | BS.null xs = m*10 + fromIntegral n
