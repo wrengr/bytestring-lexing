@@ -298,6 +298,58 @@ readExponential4 = start
 
 
 ----------------------------------------------------------------
+-- | Backpatching 'readExponential3' with the fusion of exponentiation trick in 'readExponential4'. Way slower on Float/Double; but way faster on Rational
+readExponential31 :: (Fractional a) => ByteString -> Maybe (a, ByteString)
+{-# SPECIALIZE readExponential31 ::
+    ByteString -> Maybe (Float,    ByteString),
+    ByteString -> Maybe (Double,   ByteString),
+    ByteString -> Maybe (Rational, ByteString) #-}
+readExponential31 = start
+    where
+    {-# INLINE fromFraction #-}
+    fromFraction :: (Fractional a) => Integer -> Int -> a
+    fromFraction frac scale = fromIntegral frac * (10 ^^ scale)
+    
+    start xs =
+        case BSLex.readDecimal xs of
+        Nothing           -> Nothing
+        Just (whole, xs') -> Just $! readDecimalPart whole xs'
+
+    readDecimalPart whole xs
+        | whole `seq` False               = undefined
+        | BS.null xs                      = pair (fromInteger whole) BS.empty
+        | isNotPeriod (BSU.unsafeHead xs) = readExponentPart whole 0 xs
+        | otherwise                       =
+            case BSLex.readDecimal (BSU.unsafeTail xs) of
+            Nothing          -> pair (fromInteger whole) xs
+            Just (part, xs') ->
+                let scale = BS.length xs - 1 - BS.length xs'
+                    frac = whole * (10 ^ scale) + part
+                in readExponentPart frac (negate scale) xs'
+
+    readExponentPart frac scale xs
+        | frac `seq` False           = undefined
+        | BS.null xs                 = pair (fromFraction frac scale) BS.empty
+        | isNotE (BSU.unsafeHead xs) = pair (fromFraction frac scale) xs
+        | otherwise                  =
+            -- TODO: benchmark the benefit of inlining 'readSigned' here
+            -- According to 'RealFrac' exponents should be 'Int'..., so using that instead of 'Integer' to avoid defaulting here.
+            case BSLex.readSigned BSLex.readDecimal (BSU.unsafeTail xs) of
+            Nothing       -> pair (fromFraction frac scale) xs
+            Just (e, xs') -> pair (fromFraction frac (scale + e)) xs'
+
+    {-# INLINE isNotPeriod #-}
+    isNotPeriod w = 0x2E /= w
+
+    {-# INLINE isNotE #-}
+    isNotE w = 0x65 /= w && 0x45 /= w
+
+    {-# INLINE pair #-}
+    pair x y
+        | x `seq` y `seq` False = undefined
+        | otherwise = (x,y)
+
+----------------------------------------------------------------
 ----------------------------------------------------------------
 
 unwrap :: Maybe (a, ByteString) -> a
@@ -333,6 +385,13 @@ readExponential3_Double   :: ByteString -> Double
 readExponential3_Double   = unwrap . BSLex.readSigned readExponential3
 readExponential3_Rational :: ByteString -> Rational
 readExponential3_Rational = unwrap . BSLex.readSigned readExponential3
+
+readExponential31_Float    :: ByteString -> Float
+readExponential31_Float    = unwrap . BSLex.readSigned readExponential31
+readExponential31_Double   :: ByteString -> Double
+readExponential31_Double   = unwrap . BSLex.readSigned readExponential31
+readExponential31_Rational :: ByteString -> Rational
+readExponential31_Rational = unwrap . BSLex.readSigned readExponential31
 
 readExponential4_Float    :: ByteString -> Float
 readExponential4_Float    = unwrap . BSLex.readSigned readExponential4
@@ -392,6 +451,10 @@ runQuickCheckTests = do
     QC.quickCheck (prop_read_show_idempotent readExponential3_Float)
     QC.quickCheck (prop_read_show_idempotent readExponential3_Double)
     --
+    putStrLn "Checking readExponential31..."
+    QC.quickCheck (prop_read_show_idempotent readExponential31_Float)
+    QC.quickCheck (prop_read_show_idempotent readExponential31_Double)
+    --
     putStrLn "Checking readExponential4..."
     QC.quickCheck (prop_read_show_idempotent readExponential4_Float)
     QC.quickCheck (prop_read_show_idempotent readExponential4_Double)
@@ -439,6 +502,11 @@ runCriterionTests = defaultMain
         [ benches "Float"    readExponential3_Float
         , benches "Double"   readExponential3_Double
         , benches "Rational" readExponential3_Rational
+        ]
+    , bgroup "readExponential31" $ concat
+        [ benches "Float"    readExponential31_Float
+        , benches "Double"   readExponential31_Double
+        , benches "Rational" readExponential31_Rational
         ]
     , bgroup "readExponential4" $ concat
         [ benches "Float"    readExponential4_Float

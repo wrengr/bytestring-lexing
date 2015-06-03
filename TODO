@@ -1,5 +1,6 @@
 Data.ByteString.Lex.Integral:
     * See how many of the new specializations ({Int,Word}{8,16,32,64}) are actually useful in practice.
+    * relax the Integral constraint to Num wherever possible?
 
 ./test/bench/html/:
     * Update the css to match the changes elsewhere

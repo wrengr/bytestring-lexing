@@ -38,9 +38,9 @@ module Data.ByteString.Lex.Fractional
     -- asExponential
     ) where
 
-import           Data.ByteString          (ByteString)
-import qualified Data.ByteString          as BS
-import qualified Data.ByteString.Unsafe   as BSU
+import           Data.ByteString              (ByteString)
+import qualified Data.ByteString              as BS
+import qualified Data.ByteString.Unsafe       as BSU
 import qualified Data.ByteString.Lex.Integral as I
 import           Data.ByteString.Lex.Integral (readSigned)
 
@@ -75,11 +75,11 @@ readDecimal xs =
     case I.readDecimal xs of
     Nothing -> Nothing
     Just (whole, xs')
-        | BS.null xs' || 0x2E /= BSU.unsafeHead xs' ->
-            justPair (fromInteger whole) xs'
+        | BS.null xs'                -> justPair (fromInteger whole) BS.empty
+        | 0x2E /= BSU.unsafeHead xs' -> justPair (fromInteger whole) xs'
         | otherwise ->
             case I.readDecimal (BSU.unsafeTail xs') of
-            Nothing          -> justPair (fromInteger whole) xs'
+            Nothing           -> justPair (fromInteger whole) xs'
             Just (part, xs'') ->
                 -- TODO: it'd be more robust (but slower?) to use: @(whole*base + fromInteger part) / base@
                 let base = 10 ^ (BS.length xs' - 1 - BS.length xs'')
