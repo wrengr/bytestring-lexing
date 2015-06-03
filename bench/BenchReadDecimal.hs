@@ -4,9 +4,9 @@
 --                                                    2012.01.31
 -- |
 -- Module      :  BenchReadDecimal
--- Copyright   :  Copyright (c) 2010--2012 wren gayle romano,
+-- Copyright   :  Copyright (c) 2010--2015 wren gayle romano,
 --                              2012 Erik de Castro Lopo <erikd@mega-nerd.com>
--- License     :  BSD3
+-- License     :  BSD2
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  benchmark
 -- Portability :  portable
@@ -44,17 +44,6 @@ unwrap :: Num a => Maybe (a, ByteString) -> a
 {-# INLINE unwrap #-}
 unwrap = fst . fromMaybe (0,"")
 
-atInt :: Int -> Int
-{-# INLINE atInt #-}
-atInt = id
-
-atInt64 :: Int64 -> Int64
-{-# INLINE atInt64 #-}
-atInt64 = id
-
-atInteger :: Integer -> Integer
-{-# INLINE atInteger #-}
-atInteger = id
 
 -- This is the absolute mimimal solution. It will return garbage
 -- if the input string contains anything other than ASCII digits.
@@ -966,7 +955,8 @@ readDecimal__Integer  = BSLex.readDecimal_
 -- The functions under test only work on Natural numbers (the Conent-Length
 -- field in a HTTP header is always >= 0) so we check the absolute value of
 -- the value that QuickCheck generates for us.
-prop_read_show_idempotent :: Integral a => (ByteString -> a) -> a -> Bool
+prop_read_show_idempotent
+    :: (Num a, Eq a, Show a) => (ByteString -> a) -> a -> Bool
 prop_read_show_idempotent freader x =
     let px = abs x
     in px == freader (BS8.pack $ show px)

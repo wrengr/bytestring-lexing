@@ -12,3 +12,6 @@ Bryan O'Sullivan --- For adding support for parsing Doubles from
 Erik de Castro Lopo, Vincent Hanquez, and Christoph Breitkopf ---
     for excessive tweaking and benchmarking of the readDecimal
     function.
+
+Hirotomo Moriwaki --- for highlighting the inefficiency of the old
+    Alex-based parser by publishing bytestring-read.

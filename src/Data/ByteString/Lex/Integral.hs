@@ -4,7 +4,7 @@
 -- |
 -- Module      :  Data.ByteString.Lex.Integral
 -- Copyright   :  Copyright (c) 2010--2015 wren gayle romano
--- License     :  BSD3
+-- License     :  BSD2
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  provisional
 -- Portability :  Haskell98
@@ -12,6 +12,8 @@
 -- Functions for parsing and producing 'Integral' values from\/to
 -- 'ByteString's based on the \"Char8\" encoding. That is, we assume
 -- an ASCII-compatible encoding of alphanumeric characters.
+--
+-- /Since: 0.3.0/
 ----------------------------------------------------------------
 module Data.ByteString.Lex.Integral
     (
@@ -225,6 +227,8 @@ readDecimal = start
 -- the string, and returns @0@ instead of @Nothing@. This is twice
 -- as fast for 'Int64' on 32-bit systems, but has identical performance
 -- to 'readDecimal' for all other types and architectures.
+--
+-- /Since: 0.4.0/
 readDecimal_ :: (Integral a) => ByteString -> a
 {-# SPECIALIZE readDecimal_ ::
     ByteString -> Int,

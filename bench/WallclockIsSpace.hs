@@ -4,8 +4,8 @@
 --                                                    2012.10.28
 -- |
 -- Module      :  WallclockIsSpace
--- Copyright   :  Copyright (c) 2010--2012 wren gayle romano
--- License     :  BSD
+-- Copyright   :  Copyright (c) 2010--2015 wren gayle romano
+-- License     :  BSD2
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  benchmark
 -- Portability :  portable (FFI)

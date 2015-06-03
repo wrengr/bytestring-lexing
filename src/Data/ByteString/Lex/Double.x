@@ -14,7 +14,7 @@
 -- Efficiently parse floating point literals from a 'ByteString'.
 ----------------------------------------------------------------
 
-module Data.ByteString.Lex.Double (readDouble, unsafeReadDouble) where
+module Data.ByteString.Lex.Double {-# DEPRECATED "Use Data.ByteString.Lex.Fractional instead" #-} (readDouble, unsafeReadDouble) where
 
 import qualified Data.ByteString as B
 import Data.ByteString.Internal

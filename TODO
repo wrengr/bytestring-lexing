@@ -3,3 +3,6 @@ Data.ByteString.Lex.Integral:
 
 ./test/bench/html/:
     * Update the css to match the changes elsewhere
+
+README:
+    * is woefully out of date. fix it

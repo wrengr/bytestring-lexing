@@ -1,15 +1,15 @@
 ----------------------------------------------------------------
--- wren gayle romano <wren@community.haskell.org>   ~ 2013.03.21
+-- wren gayle romano <wren@community.haskell.org>   ~ 2015.06.02
 ----------------------------------------------------------------
 
 Name:           bytestring-lexing-bench
-Version:        0.10.0
+Version:        0.11.0
 Cabal-Version:  >= 1.2
 Build-Type:     Simple
 Stability:      debugging
-Copyright:      Copyright (c) 2010--2013 wren gayle romano
-License:        BSD3
-License-File:   ../../LICENSE
+Copyright:      Copyright (c) 2010--2015 wren gayle romano
+License:        BSD2
+License-File:   ../LICENSE
 Author:         wren gayle romano
 Maintainer:     wren@community.haskell.org
 Homepage:       http://code.haskell.org/~wren/
@@ -123,6 +123,29 @@ Executable bench-ceilEightThirds
         Build-Depends: base >= 4 && < 5
     else
         Build-Depends: base < 4
+
+
+----------------------------------------------------------------
+-- | Benchmark different implementations of the @readExponential@ function.
+Executable bench-readExponential
+    Main-Is:        BenchReadExponential.hs
+    GHC-Options:    -main-is BenchReadExponential.main
+    Build-Depends:  criterion         >= 0.5.0
+                 ,  bytestring-lexing >= 0.5.0
+                 ,  bytestring-read   >= 0.3.0
+                 ,  QuickCheck        >= 2.4.1
+                 ,  deepseq           >= 1.3.0
+    
+    if flag(base4)
+        Build-Depends: base >= 4 && < 5
+    else
+        Build-Depends: base < 4
+    
+    if flag(bytestringInBase)
+        Build-Depends: base >= 2.0 && < 2.2
+    else
+        Build-Depends: base < 2.0 || >= 3, bytestring
+
 
 ----------------------------------------------------------------
 ----------------------------------------------------------- fin.

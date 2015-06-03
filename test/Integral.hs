@@ -3,7 +3,7 @@
 --                                                    2013.03.20
 -- |
 -- Copyright   :  Copyright (c) 2010--2013 wren gayle romano
--- License     :  BSD3
+-- License     :  BSD2
 -- Maintainer  :  wren@community.haskell.org
 --
 -- Correctness testing for "Data.ByteString.Lex.Integral".

@@ -4,8 +4,8 @@
 --                                                    2012.10.28
 -- |
 -- Module      :  BenchIsSpace
--- Copyright   :  Copyright (c) 2010--2012 wren gayle romano
--- License     :  BSD
+-- Copyright   :  Copyright (c) 2010--2015 wren gayle romano
+-- License     :  BSD2
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  benchmark
 -- Portability :  portable (FFI)
@@ -32,7 +32,7 @@ module BenchIsSpace (main) where
 import qualified Data.Char             as C
 import           Data.Word             (Word8)
 import qualified Data.ByteString.Char8 as B8
-import           Foreign.C.Types       (CInt)
+import           Foreign.C.Types       (CInt(..))
 import           Criterion             (bench, bgroup, nf)
 import           Criterion.Main        (defaultMain)
 

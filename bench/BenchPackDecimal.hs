@@ -3,8 +3,8 @@
 --                                                    2013.03.21
 -- |
 -- Module      :  BenchPackDecimal
--- Copyright   :  Copyright (c) 2011--2013 wren gayle romano
--- License     :  BSD
+-- Copyright   :  Copyright (c) 2011--2015 wren gayle romano
+-- License     :  BSD2
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  experimental
 -- Portability :  portable
