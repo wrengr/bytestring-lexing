@@ -131,7 +131,13 @@ readExponential2 = start
 ----------------------------------------------------------------
 -- | No longer collapsing identical branches. Doing only that is
 -- essentially the same performance, but seems slightly slower on
--- average. N.B., two of the cases in @readDecimalPart@ can short-circuit and avoid even trying to call @readExponentPart@. However, we also monomorphize the exponent parsing to 'Int', which gives a small but significant improvement across the board (and it isn't even so small for Float/Double). This gets us well into the ballpark of @bytestring-read@ for the short input on Float/Double.
+-- average. N.B., two of the cases in @readDecimalPart@ can
+-- short-circuit and avoid even trying to call @readExponentPart@.
+-- However, we also monomorphize the exponent parsing to 'Int',
+-- which gives a small but significant improvement across the board
+-- (and it isn't even so small for Float/Double). This gets us well
+-- into the ballpark of @bytestring-read@ for the short input on
+-- Float/Double.
 --
 -- Up to ~4.3x and ~3.4x faster than the Alex original.
 -- Still at ~1.3x and 1.9x faster than bytestring-read at Rational.
@@ -226,7 +232,7 @@ readExponential4 = start
             Just (frac, ys)
                 | BS.null ys ->
                     let scale = BS.length
-                              . BS.takeWhile isDecimal 
+                              . BS.takeWhile isDecimal
                               $ BS.drop magicLength xs
                     in Just $! dropDecimalPart frac scale
                         (BS.drop (magicLength+scale) xs)
@@ -298,7 +304,9 @@ readExponential4 = start
 
 
 ----------------------------------------------------------------
--- | Backpatching 'readExponential3' with the fusion of exponentiation trick in 'readExponential4'. Way slower on Float/Double; but way faster on Rational
+-- | Backpatching 'readExponential3' with the fusion of exponentiation
+-- trick in 'readExponential4'. Way slower on Float/Double; but way
+-- faster on Rational.
 readExponential31 :: (Fractional a) => ByteString -> Maybe (a, ByteString)
 {-# SPECIALIZE readExponential31 ::
     ByteString -> Maybe (Float,    ByteString),
@@ -308,7 +316,7 @@ readExponential31 = start
     where
     {-# INLINE fromFraction #-}
     fromFraction :: (Fractional a) => Integer -> Int -> a
-    fromFraction frac scale = fromIntegral frac * (10 ^^ scale)
+    fromFraction frac scale = fromInteger frac * (10 ^^ scale)
     
     start xs =
         case BSLex.readDecimal xs of
@@ -327,6 +335,64 @@ readExponential31 = start
                     frac = whole * (10 ^ scale) + part
                 in readExponentPart frac (negate scale) xs'
 
+    readExponentPart frac scale xs
+        | frac `seq` False           = undefined
+        | BS.null xs                 = pair (fromFraction frac scale) BS.empty
+        | isNotE (BSU.unsafeHead xs) = pair (fromFraction frac scale) xs
+        | otherwise                  =
+            -- TODO: benchmark the benefit of inlining 'readSigned' here
+            -- According to 'RealFrac' exponents should be 'Int'..., so using that instead of 'Integer' to avoid defaulting here.
+            case BSLex.readSigned BSLex.readDecimal (BSU.unsafeTail xs) of
+            Nothing       -> pair (fromFraction frac scale) xs
+            Just (e, xs') -> pair (fromFraction frac (scale + e)) xs'
+
+    {-# INLINE isNotPeriod #-}
+    isNotPeriod w = 0x2E /= w
+
+    {-# INLINE isNotE #-}
+    isNotE w = 0x65 /= w && 0x45 /= w
+
+    {-# INLINE pair #-}
+    pair x y
+        | x `seq` y `seq` False = undefined
+        | otherwise = (x,y)
+
+----------------------------------------------------------------
+-- | Moving around the 'fromInteger' conversion in 'readExponential31'.
+-- Better for Float/Double (though still slower than 'readExponential3');
+-- worse for Rational (the short test is slower than 'readExponential3',
+-- but the long test is still faster than 'readExponential3').
+readExponential32 :: forall a. (Fractional a) => ByteString -> Maybe (a, ByteString)
+{-# SPECIALIZE readExponential32 ::
+    ByteString -> Maybe (Float,    ByteString),
+    ByteString -> Maybe (Double,   ByteString),
+    ByteString -> Maybe (Rational, ByteString) #-}
+readExponential32 = start
+    where
+    {-# INLINE fromFraction #-}
+    fromFraction :: a -> Int -> a
+    fromFraction frac scale = frac * (10 ^^ scale)
+    
+    start xs =
+        case BSLex.readDecimal xs of
+        Nothing           -> Nothing
+        Just (whole, xs') -> Just $! readDecimalPart (fromInteger whole) xs'
+
+    readDecimalPart :: a -> ByteString -> (a,ByteString)
+    readDecimalPart whole xs
+        | whole `seq` False               = undefined
+        | BS.null xs                      = pair whole BS.empty
+        | isNotPeriod (BSU.unsafeHead xs) = readExponentPart whole 0 xs
+        | otherwise                       =
+            case BSLex.readDecimal (BSU.unsafeTail xs) of
+            Nothing          -> pair whole xs
+            Just (part, xs') ->
+                let scale = BS.length xs - 1 - BS.length xs'
+                    -- TODO: @Data.Ratio.numerator whole * (10...@
+                    frac = whole * (10 ^ scale) + fromInteger part
+                in readExponentPart frac (negate scale) xs'
+
+    readExponentPart :: a -> Int -> ByteString -> (a,ByteString)
     readExponentPart frac scale xs
         | frac `seq` False           = undefined
         | BS.null xs                 = pair (fromFraction frac scale) BS.empty
@@ -393,6 +459,13 @@ readExponential31_Double   = unwrap . BSLex.readSigned readExponential31
 readExponential31_Rational :: ByteString -> Rational
 readExponential31_Rational = unwrap . BSLex.readSigned readExponential31
 
+readExponential32_Float    :: ByteString -> Float
+readExponential32_Float    = unwrap . BSLex.readSigned readExponential32
+readExponential32_Double   :: ByteString -> Double
+readExponential32_Double   = unwrap . BSLex.readSigned readExponential32
+readExponential32_Rational :: ByteString -> Rational
+readExponential32_Rational = unwrap . BSLex.readSigned readExponential32
+
 readExponential4_Float    :: ByteString -> Float
 readExponential4_Float    = unwrap . BSLex.readSigned readExponential4
 readExponential4_Double   :: ByteString -> Double
@@ -455,6 +528,10 @@ runQuickCheckTests = do
     QC.quickCheck (prop_read_show_idempotent readExponential31_Float)
     QC.quickCheck (prop_read_show_idempotent readExponential31_Double)
     --
+    putStrLn "Checking readExponential32..."
+    QC.quickCheck (prop_read_show_idempotent readExponential32_Float)
+    QC.quickCheck (prop_read_show_idempotent readExponential32_Double)
+    --
     putStrLn "Checking readExponential4..."
     QC.quickCheck (prop_read_show_idempotent readExponential4_Float)
     QC.quickCheck (prop_read_show_idempotent readExponential4_Double)
@@ -507,6 +584,11 @@ runCriterionTests = defaultMain
         [ benches "Float"    readExponential31_Float
         , benches "Double"   readExponential31_Double
         , benches "Rational" readExponential31_Rational
+        ]
+    , bgroup "readExponential32" $ concat
+        [ benches "Float"    readExponential32_Float
+        , benches "Double"   readExponential32_Double
+        , benches "Rational" readExponential32_Rational
         ]
     , bgroup "readExponential4" $ concat
         [ benches "Float"    readExponential4_Float
