@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 ----------------------------------------------------------------
 --                                                    2015.06.02
 -- |
@@ -8,7 +9,7 @@
 -- License     :  BSD2
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  benchmark
--- Portability :  portable
+-- Portability :  ScopedTypeVariables
 --
 -- Benchmark the speed of parsing floating point numbers. This
 -- benchmark originally came from @bytestring-read@ version 0.3.0.
@@ -21,6 +22,7 @@ import           Data.ByteString                (ByteString)
 import qualified Data.ByteString                as BS
 import qualified Data.ByteString.Unsafe         as BSU
 import qualified Data.ByteString.Char8          as BS8
+import           Data.Word                      (Word8, Word64)
 import qualified Test.QuickCheck                as QC
 import qualified Data.ByteString.Read           as BSRead
 import qualified BenchReadExponential.Double    as BSLexOld
@@ -102,16 +104,16 @@ readExponential2 = start
         Nothing -> Nothing
         Just (whole, xs1)
             | BS.null xs1 || 0x2E /= BSU.unsafeHead xs1 ->
-                Just $ finish (fromInteger whole) xs1
+                Just $ readExponentPart (fromInteger whole) xs1
             | otherwise ->
                 case BSLex.readDecimal (BSU.unsafeTail xs1) of
-                Nothing          -> Just $ finish (fromInteger whole) xs1
+                Nothing          -> Just $ readExponentPart (fromInteger whole) xs1
                 Just (part, xs2) ->
                     let base = 10 ^ (BS.length xs1 - 1 - BS.length xs2)
                         frac = fromInteger whole + (fromInteger part / base)
-                    in Just $ finish frac xs2
+                    in Just $ readExponentPart frac xs2
     
-    finish frac xs0
+    readExponentPart frac xs0
         | BS.null xs0 || (0x65 /= BSU.unsafeHead xs0 && 0x45 /= BSU.unsafeHead xs0) =
             pair frac xs0
         | otherwise =
@@ -129,12 +131,7 @@ readExponential2 = start
 ----------------------------------------------------------------
 -- | No longer collapsing identical branches. Doing only that is
 -- essentially the same performance, but seems slightly slower on
--- average. N.B., two of the cases in @continue@ can short-circuit
--- and avoid even trying to call @finish@. However, we also
--- monomorphize the exponent parsing to 'Int', which gives a small
--- but significant improvement across the board (and it isn't even
--- so small for Float/Double). This gets us well into the ballpark
--- of @bytestring-read@ for the short input on Float/Double.
+-- average. N.B., two of the cases in @readDecimalPart@ can short-circuit and avoid even trying to call @readExponentPart@. However, we also monomorphize the exponent parsing to 'Int', which gives a small but significant improvement across the board (and it isn't even so small for Float/Double). This gets us well into the ballpark of @bytestring-read@ for the short input on Float/Double.
 --
 -- Up to ~4.3x and ~3.4x faster than the Alex original.
 -- Still at ~1.3x and 1.9x faster than bytestring-read at Rational.
@@ -155,12 +152,12 @@ readExponential3 = start
     start xs =
         case BSLex.readDecimal xs of
         Nothing           -> Nothing
-        Just (whole, xs') -> Just $! continue (fromInteger whole) xs'
+        Just (whole, xs') -> Just $! readDecimalPart (fromInteger whole) xs'
 
-    continue whole xs
+    readDecimalPart whole xs
         | whole `seq` False               = undefined
-        | BS.null xs                      = pair whole xs
-        | isNotPeriod (BSU.unsafeHead xs) = finish whole xs
+        | BS.null xs                      = pair whole BS.empty
+        | isNotPeriod (BSU.unsafeHead xs) = readExponentPart whole xs
         | otherwise                       =
             case BSLex.readDecimal (BSU.unsafeTail xs) of
             Nothing          -> pair whole xs
@@ -168,11 +165,11 @@ readExponential3 = start
                 let base = 10 ^ (BS.length xs - 1 - BS.length xs')
                     frac = whole + (fromInteger part / base)
                     -- TODO: it'd be more robust (but slower?) to use: @(whole*base + fromInteger part) / base@
-                in finish frac xs'
+                in readExponentPart frac xs'
 
-    finish frac xs
+    readExponentPart frac xs
         | frac `seq` False           = undefined
-        | BS.null xs                 = pair frac xs
+        | BS.null xs                 = pair frac BS.empty
         | isNotE (BSU.unsafeHead xs) = pair frac xs
         | otherwise                  =
             -- TODO: benchmark the benefit of inlining 'readSigned' here
@@ -192,16 +189,123 @@ readExponential3 = start
         | x `seq` y `seq` False = undefined
         | otherwise = (x,y)
 
+----------------------------------------------------------------
+-- | Trying the 'RealFloat' trick from @bytestring-read@. Wow that's fast!
+--
+-- Is ~1.85x to ~2.0x faster at Float/Double on the short input.
+-- Is ~1.58x faster at Float/Double on the long input.
+readExponential4 :: forall a. (RealFloat a) => ByteString -> Maybe (a, ByteString)
+{-# SPECIALIZE readExponential4 ::
+    ByteString -> Maybe (Float,  ByteString),
+    ByteString -> Maybe (Double, ByteString) #-}
+readExponential4 = start
+    where
+    -- TODO: double check that this proxy code gets optimized away in Core
+    -- TODO: how can we get our hands on this type without ScopedTypeVariables?
+    proxy :: a
+    proxy = undefined
+    
+    -- Double's max fractional value is 9007199254740992, length=16
+    -- Float's max fractional value is 16777216, length=8
+    magicLength = length . show $ (floatRadix proxy ^ floatDigits proxy)
+    
+    -- For 'Float' it's sufficient to use 'Word24' as the intermediate
+    -- type, and for 'Double' it's sufficient to use 'Word53'.
+    -- HACK: the first input type should be specified by a fundep or typefamily!
+    {-# INLINE fromFraction #-}
+    fromFraction :: Word64 -> Int -> a
+    fromFraction frac scale = fromIntegral frac * (10 ^^ scale)
+    
+    -- BUG: need to deal with leading zeros re 'magicLength'
+    start :: ByteString -> Maybe (a, ByteString)
+    start xs
+        | BS.length xs <= magicLength = readExponential3 xs
+        | otherwise                   =
+            case BSLex.readDecimal (BS.take magicLength xs) of
+            Nothing          -> Nothing
+            Just (frac, ys)
+                | BS.null ys ->
+                    let scale = BS.length
+                              . BS.takeWhile isDecimal 
+                              $ BS.drop magicLength xs
+                    in Just $! dropDecimalPart frac scale
+                        (BS.drop (magicLength+scale) xs)
+                | otherwise  ->
+                    let len = BS.length ys in
+                    Just $! readDecimalPart frac len
+                        (BS.drop (magicLength-len) xs)
+
+    dropDecimalPart :: Word64 -> Int -> ByteString -> (a, ByteString)
+    dropDecimalPart frac scale xs
+        | frac `seq` scale `seq` False = undefined
+        | BS.null xs = pair (fromFraction frac scale) BS.empty
+        | otherwise  = readExponentPart frac scale $!
+            if isNotPeriod (BSU.unsafeHead xs)
+            then xs
+            else BS.dropWhile isDecimal (BSU.unsafeTail xs)
+    
+    readDecimalPart :: Word64 -> Int -> ByteString -> (a, ByteString)
+    readDecimalPart frac len xs
+        | frac `seq` len `seq` False      = undefined
+        | BS.null xs                      = error "readExponential4.readDecimalPart: impossible"
+        | isNotPeriod (BSU.unsafeHead xs) = readExponentPart frac 0 xs
+        | otherwise                       =
+            let ys = BS.take len (BSU.unsafeTail xs) in
+            case BSLex.readDecimal ys of
+            Nothing           -> pair (fromIntegral frac) xs
+            Just (part, ys')
+                | BS.null ys' ->
+                    let scale = BS.length ys in
+                    readExponentPart
+                        (frac * (10 ^ scale) + part)
+                        (negate scale)
+                        (BS.dropWhile isDecimal (BS.drop (1+scale) xs))
+                | otherwise   ->
+                    let scale = BS.length ys - BS.length ys' in
+                    readExponentPart
+                        (frac * (10 ^ scale) + part)
+                        (negate scale)
+                        (BS.drop (1+scale) xs)
+
+    readExponentPart :: Word64 -> Int -> ByteString -> (a, ByteString)
+    readExponentPart frac scale xs
+        | frac `seq` scale `seq` False = undefined
+        | BS.null xs                 = pair (fromFraction frac scale) BS.empty
+        | isNotE (BSU.unsafeHead xs) = pair (fromFraction frac scale) xs
+        | otherwise                  =
+            -- TODO: benchmark the benefit of inlining 'readSigned' here
+            -- According to 'RealFrac' exponents should be 'Int'..., so using that instead of 'Integer' to avoid defaulting here.
+            case BSLex.readSigned BSLex.readDecimal (BSU.unsafeTail xs) of
+            Nothing       -> pair (fromFraction frac scale) xs
+            Just (e, xs') -> pair (fromFraction frac (scale + e)) xs'
+
+    {-# INLINE isNotPeriod #-}
+    isNotPeriod :: Word8 -> Bool
+    isNotPeriod w = 0x2E /= w
+
+    {-# INLINE isNotE #-}
+    isNotE :: Word8 -> Bool
+    isNotE w = 0x65 /= w && 0x45 /= w
+
+    {-# INLINE isDecimal #-}
+    isDecimal :: Word8 -> Bool
+    isDecimal w = 0x39 >= w && w >= 0x30
+    
+    {-# INLINE pair #-}
+    pair x y
+        | x `seq` y `seq` False = undefined
+        | otherwise = (x,y)
+
 
 ----------------------------------------------------------------
 ----------------------------------------------------------------
 
 unwrap :: Maybe (a, ByteString) -> a
 {-# INLINE unwrap #-}
-unwrap Nothing   = error "couldn't parse input"
+unwrap Nothing   = error "couldn't parse input at all"
 unwrap (Just (n,xs))
     | BS.null xs = n
-    | otherwise  = error "input not fully parsed"
+    | otherwise  = error ("input not fully parsed: " ++ BS8.unpack xs)
 
 ----------------------------------------------------------------
 -- The old version used by bytestring-lexing
@@ -229,6 +333,11 @@ readExponential3_Double   :: ByteString -> Double
 readExponential3_Double   = unwrap . BSLex.readSigned readExponential3
 readExponential3_Rational :: ByteString -> Rational
 readExponential3_Rational = unwrap . BSLex.readSigned readExponential3
+
+readExponential4_Float    :: ByteString -> Float
+readExponential4_Float    = unwrap . BSLex.readSigned readExponential4
+readExponential4_Double   :: ByteString -> Double
+readExponential4_Double   = unwrap . BSLex.readSigned readExponential4
 
 -- The versions currently used by bytestring-read
 fractional_Float         :: ByteString -> Float
@@ -282,6 +391,10 @@ runQuickCheckTests = do
     putStrLn "Checking readExponential3..."
     QC.quickCheck (prop_read_show_idempotent readExponential3_Float)
     QC.quickCheck (prop_read_show_idempotent readExponential3_Double)
+    --
+    putStrLn "Checking readExponential4..."
+    QC.quickCheck (prop_read_show_idempotent readExponential4_Float)
+    QC.quickCheck (prop_read_show_idempotent readExponential4_Double)
 
 ----------------------------------------------------------------
 
@@ -326,6 +439,10 @@ runCriterionTests = defaultMain
         [ benches "Float"    readExponential3_Float
         , benches "Double"   readExponential3_Double
         , benches "Rational" readExponential3_Rational
+        ]
+    , bgroup "readExponential4" $ concat
+        [ benches "Float"    readExponential4_Float
+        , benches "Double"   readExponential4_Double
         ]
     ]
 
