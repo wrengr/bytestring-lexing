@@ -71,19 +71,20 @@ readDecimal :: (Fractional a) => ByteString -> Maybe (a, ByteString)
     ByteString -> Maybe (Float,    ByteString),
     ByteString -> Maybe (Double,   ByteString),
     ByteString -> Maybe (Rational, ByteString) #-}
-readDecimal xs0 =
-    case I.readDecimal xs0 of
+readDecimal xs =
+    case I.readDecimal xs of
     Nothing -> Nothing
-    Just (whole, xs1)
-        | BS.null xs1 || 0x2E /= BSU.unsafeHead xs1 ->
-            justPair (fromInteger whole) xs1
+    Just (whole, xs')
+        | BS.null xs' || 0x2E /= BSU.unsafeHead xs' ->
+            justPair (fromInteger whole) xs'
         | otherwise ->
-            case I.readDecimal (BSU.unsafeTail xs1) of
-            Nothing          -> justPair (fromInteger whole) xs1
-            Just (part, xs2) ->
-                let base = 10 ^ (BS.length xs1 - 1 - BS.length xs2)
+            case I.readDecimal (BSU.unsafeTail xs') of
+            Nothing          -> justPair (fromInteger whole) xs'
+            Just (part, xs'') ->
+                -- TODO: it'd be more robust (but slower?) to use: @(whole*base + fromInteger part) / base@
+                let base = 10 ^ (BS.length xs' - 1 - BS.length xs'')
                     frac = fromInteger whole + (fromInteger part / base)
-                in justPair frac xs2
+                in justPair frac xs''
 
 ----------------------------------------------------------------
 -- If and only if(!) we have @Real a@, then we can use 'toRational'...
@@ -113,10 +114,10 @@ readHexadecimal :: (Fractional a) => ByteString -> Maybe (a, ByteString)
     ByteString -> Maybe (Float,    ByteString),
     ByteString -> Maybe (Double,   ByteString),
     ByteString -> Maybe (Rational, ByteString) #-}
-readHexadecimal xs0 = 
-    case I.readHexadecimal xs0 of
+readHexadecimal xs = 
+    case I.readHexadecimal xs of
     Nothing       -> Nothing
-    Just (n, xs1) -> justPair (fromInteger n) xs1
+    Just (n, xs') -> justPair (fromInteger n) xs'
 
 
 -- TODO:
@@ -143,10 +144,10 @@ readOctal :: (Fractional a) => ByteString -> Maybe (a, ByteString)
     ByteString -> Maybe (Float,    ByteString),
     ByteString -> Maybe (Double,   ByteString),
     ByteString -> Maybe (Rational, ByteString) #-}
-readOctal xs0 = 
-    case I.readOctal xs0 of
+readOctal xs = 
+    case I.readOctal xs of
     Nothing       -> Nothing
-    Just (n, xs1) -> justPair (fromInteger n) xs1
+    Just (n, xs') -> justPair (fromInteger n) xs'
 
 -- TODO:
 -- Convert a non-negative integer into an ASCII octal string.
@@ -168,18 +169,27 @@ readExponential :: (Fractional a) => ByteString -> Maybe (a, ByteString)
     ByteString -> Maybe (Float,    ByteString),
     ByteString -> Maybe (Double,   ByteString),
     ByteString -> Maybe (Rational, ByteString) #-}
-readExponential xs0 =
-    case readDecimal xs0 of
+readExponential xs =
+    -- TODO: inlining 'readDecimal' here would allow a couple
+    -- branches to shortcut. Should be a slight improvement for
+    -- those cases, but seems to give marginally worse performance
+    -- for the final branch (instruction caching?)
+    case readDecimal xs of
     Nothing -> Nothing
-    Just (f, xs1)
-        | BS.null xs1 || (0x65 /= BSU.unsafeHead xs1 && 0x45 /= BSU.unsafeHead xs1) ->
-            justPair f xs1
+    Just (frac, xs')
+        | BS.null xs' || isNotE (BSU.unsafeHead xs') ->
+            justPair frac xs'
         | otherwise ->
-            -- TODO: benchmark the benefit of inlining 'readSigned' here
-            -- BUG: defaults to Integer... using 'fromInteger' on @e@ doesn't help...
-            case readSigned I.readDecimal (BSU.unsafeTail xs1) of
-            Nothing       -> justPair f xs1
-            Just (e, xs2) -> justPair (f * (10 ^^ e)) xs2
+            -- According to 'RealFrac' exponents should be 'Int',
+            -- so using that to avoid defaulting here. N.B., this
+            -- gives a major performance bost over using 'Integer'
+            -- for @a~Float@ and @a~Double@.
+            case readSigned I.readDecimal (BSU.unsafeTail xs') of
+            Nothing        -> justPair frac xs'
+            Just (e, xs'') -> justPair (frac * (10 ^^ (e::Int)) xs''
+    where
+    {-# INLINE isNotE #-}
+    isNotE w = 0x65 /= w && 0x45 /= w
 
 ----------------------------------------------------------------
 ----------------------------------------------------------- fin.
