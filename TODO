@@ -9,3 +9,6 @@ README:
 
 Data.ByteString.Lex.Lazy.*:
     * reintroduce modules for working with lazy bytestrings
+
+.travis.yml:
+    * actually use this!
