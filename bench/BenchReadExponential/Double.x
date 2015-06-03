@@ -4,7 +4,7 @@
 ----------------------------------------------------------------
 --                                                    2012.01.25
 -- |
--- Module      :  Data.ByteString.Lex.Lazy.Double
+-- Module      :  Data.ByteString.Lex.Double
 -- Copyright   :  Copyright (c) 2008--2011 Don Stewart
 -- License     :  BSD2/MIT
 -- Maintainer  :  wren@community.haskell.org
@@ -14,15 +14,20 @@
 -- Efficiently parse floating point literals from a 'ByteString'.
 ----------------------------------------------------------------
 
-module Data.ByteString.Lex.Lazy.Double {-# DEPRECATED "Use Data.ByteString.Lex.Fractional instead" #-} (readDouble) where
+module BenchReadExponential.Double (readDouble, unsafeReadDouble) where
 
-import qualified Data.ByteString.Lazy as LB
-import qualified Data.ByteString      as SB
-import Data.ByteString.Lex.Internal (strtod)
+import qualified Data.ByteString as B
+import Data.ByteString.Internal
+import BenchReadExponential.Internal (strtod, c_strtod)
+import qualified Data.ByteString.Unsafe as B
+
+import Foreign
+import Foreign.C.Types
+import Foreign.C.String
 ----------------------------------------------------------------
 }
 
-%wrapper "basic-bytestring"
+%wrapper "strict-bytestring"
 
 $space       = [\ \t\xa0]
 $digit       = 0-9
@@ -43,7 +48,7 @@ $hexit       = [$digit A-F a-f]
 
 lex :-
 
-@sign? @number { strtod . strict }
+@sign? @number { strtod }
 
 {
 
@@ -79,13 +84,38 @@ lex :-
 -- >                     Nothing       -> n
 -- >                     Just (k,rest) -> go (n+k) (S.tail rest)
 --
-readDouble :: LB.ByteString -> Maybe (Double, LB.ByteString)
-readDouble str = case alexScan ('\n', str) 0 of
+readDouble :: ByteString -> Maybe (Double, ByteString)
+readDouble str = case alexScan (AlexInput '\n' str) 0 of
     AlexEOF            -> Nothing
     AlexError _        -> Nothing
-    AlexToken (_, rest) n _ ->
-       case strtod . strict . LB.take (fromIntegral n) $ str of
-         d -> Just $! (d , rest)
+    AlexToken (AlexInput _ rest) n _ ->
+       case strtod (B.unsafeTake n str) of d -> d `seq` Just $! (d , rest)
 
-strict = SB.concat . LB.toChunks
-}
+----------------------------------------------------------------
+-- | Bare bones, unsafe wrapper for C's @strtod(3)@. This provides
+-- a non-copying direct parsing of Double values from a ByteString.
+-- It uses @strtod@ directly on the bytestring buffer. @strtod@
+-- requires the string to be null terminated, or for a guarantee
+-- that parsing will find a floating point value before the end of
+-- the string.
+--
+unsafeReadDouble :: ByteString -> Maybe (Double, ByteString)
+{-# INLINE unsafeReadDouble #-}
+unsafeReadDouble b
+    | B.null b  = Nothing
+    | otherwise = inlinePerformIO $
+        alloca $ \resptr ->
+        B.unsafeUseAsCString b $ \ptr -> do -- copy just the bytes we want to parse
+--          resetErrno
+            d      <- c_strtod ptr resptr  -- 
+--          err    <- getErrno
+            newPtr <- peek resptr
+            return $! case d of
+                0 | newPtr == ptr -> Nothing
+--              _ | err == eRANGE -> Nothing -- adds 10% overhead
+                _ | otherwise  ->
+                        let rest = B.unsafeDrop (newPtr `minusPtr` ptr) b
+                            z    = realToFrac d
+                        in z `seq` rest `seq` Just $! (z, rest)
+
+} 

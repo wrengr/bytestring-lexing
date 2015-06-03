@@ -6,3 +6,6 @@ Data.ByteString.Lex.Integral:
 
 README:
     * is woefully out of date. fix it
+
+Data.ByteString.Lex.Lazy.*:
+    * reintroduce modules for working with lazy bytestrings

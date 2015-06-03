@@ -13,7 +13,7 @@
 -- Efficiently parse floating point literals from a 'ByteString'.
 ----------------------------------------------------------------
 
-module Data.ByteString.Lex.Internal (strtod, c_strtod) where
+module BenchReadExponential.Internal (strtod, c_strtod) where
 
 import qualified Data.ByteString.Internal as BSI (inlinePerformIO)
 import qualified Data.ByteString          as BS
