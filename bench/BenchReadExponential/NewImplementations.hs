@@ -62,6 +62,10 @@ isNotE w = 0x65 /= w && 0x45 /= w
 isDecimal :: Word8 -> Bool
 isDecimal w = 0x39 >= w && w >= 0x30
 
+{-# INLINE isDecimalZero #-}
+isDecimalZero :: Word8 -> Bool
+isDecimalZero w = w >= 0x30
+
 ----------------------------------------------------------------
 -- | Version 1 of trying to speed things up. Is 3~3.5x faster than
 -- the old Alex version, but still ~1.5x and ~3x slower than BSRead
@@ -168,7 +172,7 @@ readExponential2 = start
 ----------------------------------------------------------------
 -- | No longer collapsing identical branches. Doing only that is
 -- essentially the same performance, but seems slightly slower on
--- average. N.B., two of the cases in @readDecimalPart@ can
+-- average. N.B., two of the cases in @readFractionPart@ can
 -- short-circuit and avoid even trying to call @readExponentPart@.
 -- However, we also monomorphize the exponent parsing to 'Int',
 -- which gives a small but significant improvement across the board
@@ -195,9 +199,9 @@ readExponential3 = start
     start xs =
         case BSLex.readDecimal xs of
         Nothing           -> Nothing
-        Just (whole, xs') -> Just $! readDecimalPart (fromInteger whole) xs'
+        Just (whole, xs') -> Just $! readFractionPart (fromInteger whole) xs'
 
-    readDecimalPart whole xs
+    readFractionPart whole xs
         | whole `seq` False               = undefined
         | BS.null xs                      = pair whole BS.empty
         | isNotPeriod (BSU.unsafeHead xs) = readExponentPart whole xs
@@ -259,15 +263,15 @@ readExponential4 = start
                     let scale = BS.length
                               . BS.takeWhile isDecimal
                               $ BS.drop magicLength xs
-                    in Just $! dropDecimalPart frac scale
+                    in Just $! dropFractionPart frac scale
                         (BS.drop (magicLength+scale) xs)
                 | otherwise  ->
                     let len = BS.length ys in
-                    Just $! readDecimalPart frac len
+                    Just $! readFractionPart frac len
                         (BS.drop (magicLength-len) xs)
 
-    dropDecimalPart :: Word64 -> Int -> ByteString -> (a, ByteString)
-    dropDecimalPart frac scale xs
+    dropFractionPart :: Word64 -> Int -> ByteString -> (a, ByteString)
+    dropFractionPart frac scale xs
         | frac `seq` scale `seq` False = undefined
         | BS.null xs = pair (fromFraction frac scale) BS.empty
         | otherwise  = readExponentPart frac scale $!
@@ -275,10 +279,10 @@ readExponential4 = start
             then xs
             else BS.dropWhile isDecimal (BSU.unsafeTail xs)
     
-    readDecimalPart :: Word64 -> Int -> ByteString -> (a, ByteString)
-    readDecimalPart frac len xs
+    readFractionPart :: Word64 -> Int -> ByteString -> (a, ByteString)
+    readFractionPart frac len xs
         | frac `seq` len `seq` False      = undefined
-        | BS.null xs                      = error "readExponential4.readDecimalPart: impossible"
+        | BS.null xs                      = error "readExponential4.readFractionPart: impossible"
         | isNotPeriod (BSU.unsafeHead xs) = readExponentPart frac 0 xs
         | otherwise                       =
             let ys = BS.take len (BSU.unsafeTail xs) in
@@ -328,9 +332,9 @@ readExponential31 = start
     start xs =
         case BSLex.readDecimal xs of
         Nothing           -> Nothing
-        Just (whole, xs') -> Just $! readDecimalPart whole xs'
+        Just (whole, xs') -> Just $! readFractionPart whole xs'
 
-    readDecimalPart whole xs
+    readFractionPart whole xs
         | whole `seq` False               = undefined
         | BS.null xs                      = pair (fromInteger whole) BS.empty
         | isNotPeriod (BSU.unsafeHead xs) = readExponentPart whole 0 xs
@@ -372,10 +376,10 @@ readExponential32 = start
     start xs =
         case BSLex.readDecimal xs of
         Nothing           -> Nothing
-        Just (whole, xs') -> Just $! readDecimalPart (fromInteger whole) xs'
+        Just (whole, xs') -> Just $! readFractionPart (fromInteger whole) xs'
 
-    readDecimalPart :: a -> ByteString -> (a,ByteString)
-    readDecimalPart whole xs
+    readFractionPart :: a -> ByteString -> (a,ByteString)
+    readFractionPart whole xs
         | whole `seq` False               = undefined
         | BS.null xs                      = pair whole BS.empty
         | isNotPeriod (BSU.unsafeHead xs) = readExponentPart whole 0 xs
@@ -539,26 +543,26 @@ readDecimal41 = start
     where
     -- BUG: need to deal with leading zeros re @p@
     -- TODO: verify this is inferred strict in both @p@ and @xs@
-    start p xs = 
+    start p xs =
         let ys = BS.take p xs in
         -- monomorphic at type 'Integer' because that's what 'DF' requires
         case BSLex.readDecimal ys of
         Nothing           -> Nothing
         Just (whole, ys')
             | BS.null ys' ->
-                -- TODO: inline dropDecimalPart?
+                -- TODO: inline dropFractionPart?
                 let scale = BS.length
                           . BS.takeWhile isDecimal
                           $ BS.drop p xs
-                in Just $! dropDecimalPart whole scale
+                in Just $! dropFractionPart whole scale
                     (BS.drop (p+scale) xs)
             | otherwise  ->
                 -- N.B., if @p > BS.length xs@ then can't use the old implementation from readExponential4!
                 let len = BS.length ys - BS.length ys' in
-                Just $! readDecimalPart (p-len) whole
+                Just $! readFractionPart (p-len) whole
                     (BS.drop len xs)
 
-    dropDecimalPart whole scale xs
+    dropFractionPart whole scale xs
         | whole `seq` scale `seq` False = undefined
         | BS.null xs = pair (DF whole scale) BS.empty
         | otherwise  = pair (DF whole scale) $!
@@ -566,7 +570,7 @@ readDecimal41 = start
             then xs
             else BS.dropWhile isDecimal (BSU.unsafeTail xs)
     
-    readDecimalPart p whole xs
+    readFractionPart p whole xs
         | p `seq` whole `seq` False       = undefined
         | BS.null xs                      = error "the impossible happened"
         | isNotPeriod (BSU.unsafeHead xs) = pair (DF whole 0) xs
@@ -629,6 +633,116 @@ decimalPrecision = \p ->
 -- Underflows to zero at fromDF(DF 16777216 (-309)); fromDF(DF 16777216 (-308)) is fine; 308 == 2^8 + 2^5 + 2^4 + 2^2. Still no NaN...
 -- BUG: where the heck does the NaN come from??
 -- Aha! fromDF(DF 0 39)::Float == NaN !! Easy enough to fix... but why would parsing the \"long\" example in BenchReadExponential.hs result in a DF with 0 significand?
+
+
+----------------------------------------------------------------
+-- | A variant of 'readDecimal41' trying to fix the bug about leading zeros.
+readDecimal42 :: (Fractional a) => Int -> ByteString -> Maybe (DecimalFraction a, ByteString)
+{-# SPECIALIZE readDecimal42 ::
+    Int -> ByteString -> Maybe (DecimalFraction Float,    ByteString),
+    Int -> ByteString -> Maybe (DecimalFraction Double,   ByteString),
+    Int -> ByteString -> Maybe (DecimalFraction Rational, ByteString) #-}
+readDecimal41 = start
+    where
+    -- BUG: need to deal with leading zeros re @p@
+    -- TODO: verify this is inferred strict in both @p@ and @xs@
+    start p xs
+        | p `seq` xs `seq` False = undefined
+        | BS.null xs = Nothing
+        | otherwise  = afterDroppingZeroes p (BS.dropWhile isDecimalZero xs)
+    
+    afterDroppingZeroes p xs
+        | BS.null xs                      = justPair (DF 0 0) BS.empty
+        | isNotPeriod (BSU.unsafeHead xs) = readWholePart p xs
+        | otherwise =
+            let ys    = BS.dropWhile isDecimalZero (BSU.unsafeTail xs)
+                scale = BS.length xs - 1 - BS.length ys
+            in if BS.null ys then justPair (DF 0 0) BS.empty else
+            -- monomorphic at type 'Integer' because that's what 'DF' requires
+            case BSLex.readDecimal ys of
+            Nothing           -> justPair (DF 0 0) ys
+            Just (part, ys')
+                | BS.null ys' ->
+                    let scale = BS.length ys in
+                    pair (DF (whole * (10 ^ scale) + part) (negate scale))
+                        (BS.dropWhile isDecimal (BS.drop (1+scale) xs))
+                | otherwise   ->
+                    let scale = BS.length ys - BS.length ys' in
+                    pair (DF (whole * (10 ^ scale) + part) (negate scale))
+                        (BS.drop (1+scale) xs)
+            
+                        
+    readWholePart p xs =
+        let ys = BS.take p xs in
+        -- monomorphic at type 'Integer' because that's what 'DF' requires
+        case BSLex.readDecimal ys of
+        Nothing           -> Nothing
+        Just (whole, ys')
+            | BS.null ys' ->
+                -- TODO: inline dropFractionPart?
+                let scale = BS.length
+                          . BS.takeWhile isDecimal
+                          $ BS.drop p xs
+                in Just $! dropFractionPart whole scale
+                    (BS.drop (p+scale) xs)
+            | otherwise  ->
+                -- N.B., if @p > BS.length xs@ then can't use the old implementation from readExponential4!
+                let len = BS.length ys - BS.length ys' in
+                Just $! readFractionPart (p-len) whole
+                    (BS.drop len xs)
+
+    dropFractionPart whole scale xs
+        | whole `seq` scale `seq` False = undefined
+        | BS.null xs = pair (DF whole scale) BS.empty
+        | otherwise  = pair (DF whole scale) $!
+            if isNotPeriod (BSU.unsafeHead xs)
+            then xs
+            else BS.dropWhile isDecimal (BSU.unsafeTail xs) -- BUG: must ensure we drop at least one decimal. Else will accept "\d^(<=p) \d^scale \."
+    
+    readFractionPart p whole xs
+        | p `seq` whole `seq` False       = undefined
+        | BS.null xs                      = error "the impossible happened"
+            -- N.B., returning @pair (DF whole 0) BS.empty@ is fine (i.e., consistent with the dropFractionPart definition when the original input is less than the original @p@ long); but we should never actually reach this branch due to the control-flow logic.
+        | isNotPeriod (BSU.unsafeHead xs) = pair (DF whole 0) xs
+        | otherwise                       =
+            let ys = BS.take p (BSU.unsafeTail xs) in
+            -- monomorphic at type 'Integer' because that's what 'DF' requires
+            case BSLex.readDecimal ys of
+            Nothing           -> pair (DF whole 0) xs
+            Just (part, ys')
+                | BS.null ys' ->
+                    let scale = BS.length ys in
+                    pair (DF (whole * (10 ^ scale) + part) (negate scale))
+                        (BS.dropWhile isDecimal (BS.drop (1+scale) xs))
+                | otherwise   ->
+                    let scale = BS.length ys - BS.length ys' in
+                    pair (DF (whole * (10 ^ scale) + part) (negate scale))
+                        (BS.drop (1+scale) xs)
+
+
+-- | A variant of 'readExponential41' using 'readDecimal42'.
+readExponential42 :: (Fractional a) => Int -> ByteString -> Maybe (a, ByteString)
+{-# SPECIALIZE readExponential42 ::
+    Int -> ByteString -> Maybe (Float,    ByteString),
+    Int -> ByteString -> Maybe (Double,   ByteString),
+    Int -> ByteString -> Maybe (Rational, ByteString) #-}
+readExponential42 = start
+    where
+    start p xs =
+        case readDecimal42 p xs of
+        Nothing       -> Nothing
+        Just (df,xs') -> Just $! readExponentPart df xs'
+    
+    readExponentPart df xs
+        | BS.null xs                 = pair (fromDF df) BS.empty
+        | isNotE (BSU.unsafeHead xs) = pair (fromDF df) xs
+        | otherwise                  =
+            -- HACK: monomorphizing at 'Int'
+            -- TODO: how to handle too-large exponents?
+            case BSLex.readSigned BSLex.readDecimal (BSU.unsafeTail xs) of
+            Nothing           -> pair (fromDF df) xs
+            Just (scale, xs') -> pair (fromDF $ scaleDF df scale) xs'
+
 
 ----------------------------------------------------------------
 ----------------------------------------------------------- fin.

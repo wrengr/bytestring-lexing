@@ -181,16 +181,19 @@ runCriterionTests = defaultMain
         , benches "Double"   $ atDouble   s_fractional
         , benches "Rational" $ atRational s_fractional
         ]
+    {-
     , bgroup "readExponential1" $ concat
         [ benches "Float"    $ atFloat    s_readExponential1
         , benches "Double"   $ atDouble   s_readExponential1
         , benches "Rational" $ atRational s_readExponential1
         ]
+    -}
     , bgroup "readExponential11" $ concat
         [ benches "Float"    $ atFloat    s_readExponential11
         , benches "Double"   $ atDouble   s_readExponential11
         , benches "Rational" $ atRational s_readExponential11
         ]
+    {-
     , bgroup "readExponential2" $ concat
         [ benches "Float"    $ atFloat    s_readExponential2
         , benches "Double"   $ atDouble   s_readExponential2
@@ -215,6 +218,7 @@ runCriterionTests = defaultMain
         [ benches "Float"    $ atFloat    s_readExponential4
         , benches "Double"   $ atDouble   s_readExponential4
         ]
+    -}
     , bgroup "readExponential41" $ concat
         [ benches "Float"    $ float_s_readExponential41
         , benches "Double"   $ double_s_readExponential41
