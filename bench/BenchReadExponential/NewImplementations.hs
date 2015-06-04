@@ -11,18 +11,18 @@
 -- Stability   :  benchmark
 -- Portability :  ScopedTypeVariables, MPTCs, FunDeps
 --
--- Benchmark the speed of parsing floating point numbers. This
--- benchmark originally came from @bytestring-read@ version 0.3.0.
+-- A bunch of new implementations for parsing floating point numbers.
 ----------------------------------------------------------------
 module BenchReadExponential.NewImplementations
     ( readExponential1
-    , readExponential11
+    , readExponential11 -- Implementation of choice for general fractional
     , readExponential2
     , readExponential3
     , readExponential31
     , readExponential32
     , readExponential4
-    , readExponential41
+    , readExponential41 -- Implementation of choice for limited precision
+    -- TODO: a version of readExponential41 which always does infinite precision; can give NaNs instead of Inftys, but that may be acceptable? The big reason to try this is in case dropping the extra variable lets us avoid spilling registers. Could also actually try looking at the assembly...
     ) where
 
 import           Data.ByteString              (ByteString)
@@ -517,7 +517,13 @@ data DecimalFraction a = DF {-UNPACK-}!Integer {-# UNPACK #-}!Int
 
 {-# INLINE fromDF #-}
 fromDF :: Fractional a => DecimalFraction a -> a
-fromDF (DF frac scale) = fromInteger frac * (10 ^^ scale)
+fromDF (DF frac scale)
+    -- Avoid possibility of returning NaN
+    | frac  == 0        = 0
+    -- Avoid throwing an error due to @negate minBound == minBound@
+    | scale == minBound = fromInteger frac * (10 ^^ fromIntegral scale)
+    -- Now we're safe for the default implementation
+    | otherwise         = fromInteger frac * (10 ^^ scale)
 
 {-# INLINE scaleDF #-}
 scaleDF :: Fractional a => DecimalFraction a -> Int -> DecimalFraction a
@@ -615,6 +621,14 @@ decimalPrecision :: RealFloat a => proxy a -> Int
 decimalPrecision = \p ->
     let proxy = (undefined :: proxy a -> a) (undefined `asTypeOf` p)
     in  length . show $ (floatRadix proxy ^ floatDigits proxy)
+
+-- 16777216 is the maximum significand for Float
+-- fromDF(DF 16777216 31)::Float hits Infinity (exponent is 301 for Double)
+-- also fromDF(DF 1 39)::Float hits Infinity
+-- fromDF(DF 16777216 maxBound) is still merely Infinity.
+-- Underflows to zero at fromDF(DF 16777216 (-309)); fromDF(DF 16777216 (-308)) is fine; 308 == 2^8 + 2^5 + 2^4 + 2^2. Still no NaN...
+-- BUG: where the heck does the NaN come from??
+-- Aha! fromDF(DF 0 39)::Float == NaN !! Easy enough to fix... but why would parsing the \"long\" example in BenchReadExponential.hs result in a DF with 0 significand?
 
 ----------------------------------------------------------------
 ----------------------------------------------------------- fin.
