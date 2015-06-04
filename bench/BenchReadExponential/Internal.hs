@@ -11,6 +11,8 @@
 -- Portability :  Haskell98 + FFI
 --
 -- Efficiently parse floating point literals from a 'ByteString'.
+--
+-- /This code archived from version 0.4.3.3/
 ----------------------------------------------------------------
 
 module BenchReadExponential.Internal (strtod, c_strtod) where

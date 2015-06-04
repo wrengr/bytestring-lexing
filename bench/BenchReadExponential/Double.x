@@ -12,6 +12,8 @@
 -- Portability :  Haskell98
 --
 -- Efficiently parse floating point literals from a 'ByteString'.
+--
+-- /This code archived from version 0.4.3.3/
 ----------------------------------------------------------------
 
 module BenchReadExponential.Double (readDouble, unsafeReadDouble) where
