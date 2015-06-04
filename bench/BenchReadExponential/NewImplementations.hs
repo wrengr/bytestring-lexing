@@ -537,7 +537,7 @@ readDecimal41 = start
         let ys = BS.take p xs in
         -- monomorphic at type 'Integer' because that's what 'DF' requires
         case BSLex.readDecimal ys of
-        Nothing          -> Nothing
+        Nothing           -> Nothing
         Just (whole, ys')
             | BS.null ys' ->
                 -- TODO: inline dropDecimalPart?
@@ -605,9 +605,16 @@ readExponential41 = start
             -- HACK: monomorphizing at 'Int'
             -- TODO: how to handle too-large exponents?
             case BSLex.readSigned BSLex.readDecimal (BSU.unsafeTail xs) of
-            Nothing          -> pair (fromDF df) xs
-            Just (expn, xs') -> pair (fromDF $ scaleDF df expn) xs'
+            Nothing           -> pair (fromDF df) xs
+            Just (scale, xs') -> pair (fromDF $ scaleDF df scale) xs'
 
+
+-- So far as I can seem to tell from core, it ~looks~ like everything compiles away... but then why is it compiling down to an 'Integer' instead of an 'Int'? (and how come the 'print' used in 'main' doesn't optimize away entirely? we're left passing that Integer to @$w$cshowsPrec1@ and the results to @$wlenAcc@ and those results to @$wshowSignedInt@)
+decimalPrecision :: RealFloat a => proxy a -> Int
+{-# INLINE decimalPrecision #-}
+decimalPrecision = \p ->
+    let proxy = (undefined :: proxy a -> a) (undefined `asTypeOf` p)
+    in  length . show $ (floatRadix proxy ^ floatDigits proxy)
 
 ----------------------------------------------------------------
 ----------------------------------------------------------- fin.
