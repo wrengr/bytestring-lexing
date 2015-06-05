@@ -23,6 +23,7 @@ module BenchReadExponential.NewImplementations
     , readExponential4
     , readExponential41 -- Implementation of choice for limited precision
     -- TODO: a version of readExponential41 which always does infinite precision; can give NaNs instead of Inftys, but that may be acceptable? The big reason to try this is in case dropping the extra variable lets us avoid spilling registers. Could also actually try looking at the assembly...
+    , readExponential42
     ) where
 
 import           Data.ByteString              (ByteString)
@@ -519,18 +520,26 @@ instance Integral a => DecimalFractional (Ratio a) where
 --     Float ==> Word24; Double ==> Word53; Ratio a ==> a
 data DecimalFraction a = DF {-UNPACK-}!Integer {-# UNPACK #-}!Int
 
+{-# INLINE fractionDF #-}
+fractionDF :: Integer -> Int -> Integer -> DecimalFraction a
+fractionDF whole scale part =
+    DF (whole * (10 ^ scale) + part) (negate scale)
+    -- TODO: use an unsafe variant of (^) which has an assertion instead of a runtime check?
+
 {-# INLINE fromDF #-}
 fromDF :: Fractional a => DecimalFraction a -> a
 fromDF (DF frac scale)
     -- Avoid possibility of returning NaN
+    -- TODO: really, ought to check @fromInteger frac == 0@...
     | frac  == 0        = 0
     -- Avoid throwing an error due to @negate minBound == minBound@
-    | scale == minBound = fromInteger frac * (10 ^^ fromIntegral scale)
+    | scale == minBound = fromInteger frac * (10 ^^ toInteger scale)
     -- Now we're safe for the default implementation
     | otherwise         = fromInteger frac * (10 ^^ scale)
+    -- TODO: manually implement (^^) so that we get @_ / (10^ _)@ instead of @_ * recip (10^ _)@ for negative exponents?
 
 {-# INLINE scaleDF #-}
-scaleDF :: Fractional a => DecimalFraction a -> Int -> DecimalFraction a
+scaleDF :: DecimalFraction a -> Int -> DecimalFraction a
 scaleDF (DF frac scale) scale' = DF frac (scale + scale')
 
 -- | A variant of 'readDecimal1' factored out from 'readExponential4', for use in composition with 'readExponential41'. Also, removing the bail out case when @BS.length xs <= p@.
@@ -582,11 +591,11 @@ readDecimal41 = start
             Just (part, ys')
                 | BS.null ys' ->
                     let scale = BS.length ys in
-                    pair (DF (whole * (10 ^ scale) + part) (negate scale))
+                    pair (fractionDF whole scale part)
                         (BS.dropWhile isDecimal (BS.drop (1+scale) xs))
                 | otherwise   ->
                     let scale = BS.length ys - BS.length ys' in
-                    pair (DF (whole * (10 ^ scale) + part) (negate scale))
+                    pair (fractionDF whole scale part)
                         (BS.drop (1+scale) xs)
 
 
@@ -619,12 +628,15 @@ readExponential41 = start
             Just (scale, xs') -> pair (fromDF $ scaleDF df scale) xs'
 
 
--- So far as I can seem to tell from core, it ~looks~ like everything compiles away... but then why is it compiling down to an 'Integer' instead of an 'Int'? (and how come the 'print' used in 'main' doesn't optimize away entirely? we're left passing that Integer to @$w$cshowsPrec1@ and the results to @$wlenAcc@ and those results to @$wshowSignedInt@)
-decimalPrecision :: RealFloat a => proxy a -> Int
+-- TODO: is there any way to avoid ScopedTypeVariables without losing the fact that this is a constant function?
+-- TODO: try looking at core again to see if @n@ gets completely optimized away or not. If not, is there a way to help that happen without using TH?
+decimalPrecision :: forall proxy a. RealFloat a => proxy a -> Int
 {-# INLINE decimalPrecision #-}
-decimalPrecision = \p ->
-    let proxy = (undefined :: proxy a -> a) (undefined `asTypeOf` p)
-    in  length . show $ (floatRadix proxy ^ floatDigits proxy)
+decimalPrecision =
+    let n = let proxy = (undefined :: a)
+            -- TODO: use numDecimalDigits!!
+            in length . show $ (floatRadix proxy ^ floatDigits proxy)
+    in n `seq` \_ -> n
 
 -- 16777216 is the maximum significand for Float
 -- fromDF(DF 16777216 31)::Float hits Infinity (exponent is 301 for Double)
@@ -636,17 +648,18 @@ decimalPrecision = \p ->
 
 
 ----------------------------------------------------------------
--- | A variant of 'readDecimal41' trying to fix the bug about leading zeros.
+-- | A variant of 'readDecimal41' trying to fix the bug about leading zeros. Also the other bug about accepting @\"[0-9]+\\.[^0-9].*\"@.
 readDecimal42 :: (Fractional a) => Int -> ByteString -> Maybe (DecimalFraction a, ByteString)
 {-# SPECIALIZE readDecimal42 ::
     Int -> ByteString -> Maybe (DecimalFraction Float,    ByteString),
     Int -> ByteString -> Maybe (DecimalFraction Double,   ByteString),
     Int -> ByteString -> Maybe (DecimalFraction Rational, ByteString) #-}
-readDecimal41 = start
+readDecimal42 = start
     where
     -- BUG: need to deal with leading zeros re @p@
     -- TODO: verify this is inferred strict in both @p@ and @xs@
-    start p xs
+    start p xs =
+    {-
         | p `seq` xs `seq` False = undefined
         | BS.null xs = Nothing
         | otherwise  = afterDroppingZeroes p (BS.dropWhile isDecimalZero xs)
@@ -658,66 +671,68 @@ readDecimal41 = start
             let ys    = BS.dropWhile isDecimalZero (BSU.unsafeTail xs)
                 scale = BS.length xs - 1 - BS.length ys
             in if BS.null ys then justPair (DF 0 0) BS.empty else
-            -- monomorphic at type 'Integer' because that's what 'DF' requires
+            -- @part :: Integer@ because that's what 'DF' requires
             case BSLex.readDecimal ys of
             Nothing           -> justPair (DF 0 0) ys
             Just (part, ys')
                 | BS.null ys' ->
                     let scale = BS.length ys in
-                    pair (DF (whole * (10 ^ scale) + part) (negate scale))
+                    pair (fractionDF whole scale part)
                         (BS.dropWhile isDecimal (BS.drop (1+scale) xs))
                 | otherwise   ->
                     let scale = BS.length ys - BS.length ys' in
-                    pair (DF (whole * (10 ^ scale) + part) (negate scale))
+                    pair (fractionDF whole scale part)
                         (BS.drop (1+scale) xs)
             
-                        
+    -----
     readWholePart p xs =
+    -}
         let ys = BS.take p xs in
-        -- monomorphic at type 'Integer' because that's what 'DF' requires
+        -- @whole :: Integer@ because that's what 'DF' requires
         case BSLex.readDecimal ys of
         Nothing           -> Nothing
         Just (whole, ys')
             | BS.null ys' ->
-                -- TODO: inline dropFractionPart?
                 let scale = BS.length
                           . BS.takeWhile isDecimal
                           $ BS.drop p xs
-                in Just $! dropFractionPart whole scale
-                    (BS.drop (p+scale) xs)
+                in justPair (DF whole scale)
+                    (dropFractionPart (BS.drop (p+scale) xs))
             | otherwise  ->
-                -- N.B., if @p > BS.length xs@ then can't use the old implementation from readExponential4!
-                let len = BS.length ys - BS.length ys' in
-                Just $! readFractionPart (p-len) whole
-                    (BS.drop len xs)
+                let len = BS.length ys - BS.length ys'
+                    xs' = BS.drop len xs
+                in
+                -- N.B., @BS.null xs'@ is impossible. Were it to happen then returning @pair (DF whole 0) BS.empty@ is fine (i.e., consistent with the dropFractionPart definition when the original input is less than the original @p@ long).
+                if isNotPeriod (BSU.unsafeHead xs')
+                then justPair (DF whole 0) xs'
+                else readFractionPart (p-len) whole xs'
 
-    dropFractionPart whole scale xs
-        | whole `seq` scale `seq` False = undefined
-        | BS.null xs = pair (DF whole scale) BS.empty
-        | otherwise  = pair (DF whole scale) $!
-            if isNotPeriod (BSU.unsafeHead xs)
-            then xs
-            else BS.dropWhile isDecimal (BSU.unsafeTail xs) -- BUG: must ensure we drop at least one decimal. Else will accept "\d^(<=p) \d^scale \."
-    
-    readFractionPart p whole xs
-        | p `seq` whole `seq` False       = undefined
-        | BS.null xs                      = error "the impossible happened"
-            -- N.B., returning @pair (DF whole 0) BS.empty@ is fine (i.e., consistent with the dropFractionPart definition when the original input is less than the original @p@ long); but we should never actually reach this branch due to the control-flow logic.
-        | isNotPeriod (BSU.unsafeHead xs) = pair (DF whole 0) xs
-        | otherwise                       =
-            let ys = BS.take p (BSU.unsafeTail xs) in
-            -- monomorphic at type 'Integer' because that's what 'DF' requires
-            case BSLex.readDecimal ys of
-            Nothing           -> pair (DF whole 0) xs
-            Just (part, ys')
-                | BS.null ys' ->
-                    let scale = BS.length ys in
-                    pair (DF (whole * (10 ^ scale) + part) (negate scale))
-                        (BS.dropWhile isDecimal (BS.drop (1+scale) xs))
-                | otherwise   ->
-                    let scale = BS.length ys - BS.length ys' in
-                    pair (DF (whole * (10 ^ scale) + part) (negate scale))
-                        (BS.drop (1+scale) xs)
+    -- TODO: verify that 'BS.uncons' is inlined and that the intermediate @Maybe(,)@ it returns is fused away
+    dropFractionPart xs =
+        case BS.uncons xs of
+        Nothing                    -> BS.empty -- == xs
+        Just (x0,xs0)
+            | isNotPeriod x0       -> xs
+            | otherwise            ->
+                case BS.uncons xs0 of
+                Nothing            -> BS.pack [0x2E] -- == xs
+                Just (x1,xs1)
+                    | isDecimal x1 -> BS.dropWhile isDecimal xs1
+                    | otherwise    -> xs
+
+    readFractionPart p whole xs =
+        -- N.B., @BS.null xs@ is impossible; see the call site.
+        let ys = BS.take p (BSU.unsafeTail xs) in
+        -- @part :: Integer@ because that's what 'DF' requires
+        case BSLex.readDecimal ys of
+        Nothing          -> justPair (DF whole 0) xs
+        Just (part, ys') ->
+            let scale = BS.length ys - BS.length ys' in
+            justPair (fractionDF whole scale part)
+                (BS.dropWhile isDecimal (BS.drop (1+scale) xs))
+                -- If @not (BS.null ys')@ then the @BS.dropWhile isDecimal@ is a noop. But executing that is prolly cheaper than duplicating this branch by testing @ys'@...
+                --
+                -- The @+1@ is for the 'BSU.unsafeTail' in @ys@.
 
 
 -- | A variant of 'readExponential41' using 'readDecimal42'.

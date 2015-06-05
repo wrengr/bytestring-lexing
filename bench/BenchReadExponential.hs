@@ -79,14 +79,22 @@ limit proxy = length (show (floatRadix proxy ^ floatDigits proxy))
 float_s_readExponential41 :: ByteString -> Float
 float_s_readExponential41 =
     unwrap . BSLex.readSigned (BSLexNew.readExponential41 (limit (undefined::Float)))
-
 double_s_readExponential41 :: ByteString -> Double
 double_s_readExponential41 =
     unwrap . BSLex.readSigned (BSLexNew.readExponential41 (limit (undefined::Double)))
-
 rational_s_readExponential41 :: ByteString -> Rational
 rational_s_readExponential41 =
     unwrap . BSLex.readSigned (\xs -> BSLexNew.readExponential41 (1 + BS.length xs) xs)
+
+float_s_readExponential42 :: ByteString -> Float
+float_s_readExponential42 =
+    unwrap . BSLex.readSigned (BSLexNew.readExponential42 (limit (undefined::Float)))
+double_s_readExponential42 :: ByteString -> Double
+double_s_readExponential42 =
+    unwrap . BSLex.readSigned (BSLexNew.readExponential42 (limit (undefined::Double)))
+rational_s_readExponential42 :: ByteString -> Rational
+rational_s_readExponential42 =
+    unwrap . BSLex.readSigned (\xs -> BSLexNew.readExponential42 (1 + BS.length xs) xs)
 
 ----------------------------------------------------------------
 ----------------------------------------------------------------
@@ -151,6 +159,10 @@ runQuickCheckTests = do
     putStrLn "Checking readExponential41..."
     QC.quickCheck (prop_read_show_idempotent $ float_s_readExponential41)
     QC.quickCheck (prop_read_show_idempotent $ double_s_readExponential41)
+    --
+    putStrLn "Checking readExponential42..."
+    QC.quickCheck (prop_read_show_idempotent $ float_s_readExponential42)
+    QC.quickCheck (prop_read_show_idempotent $ double_s_readExponential42)
 
 ----------------------------------------------------------------
 
@@ -223,6 +235,11 @@ runCriterionTests = defaultMain
         [ benches "Float"    $ float_s_readExponential41
         , benches "Double"   $ double_s_readExponential41
         , benches "Rational" $ rational_s_readExponential41
+        ]
+    , bgroup "readExponential42" $ concat
+        [ benches "Float"    $ float_s_readExponential42
+        , benches "Double"   $ double_s_readExponential42
+        , benches "Rational" $ rational_s_readExponential42
         ]
     ]
 
