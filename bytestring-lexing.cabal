@@ -1,5 +1,5 @@
 ----------------------------------------------------------------
--- wren gayle romano <wren@community.haskell.org>   ~ 2015.06.02
+-- wren gayle romano <wren@community.haskell.org>   ~ 2015.06.05
 ----------------------------------------------------------------
 
 -- By and large Cabal >=1.2 is fine; but >= 1.6 gives tested-with:
@@ -26,6 +26,7 @@ Description:
     Some benchmarks for this package can be found at:
     <http://community.haskell.org/~wren/bytestring-lexing/test/bench/html>
 
+
 -- Formerly tested with GHCs 6.8.2, 6.10.1, 6.12.1, 7.0.3, 7.6.1, 7.8.0; but those are no longer verified.
 Tested-With:
     GHC ==7.8.3, GHC == 7.10.1
@@ -37,10 +38,11 @@ Source-Repository head
 
 ----------------------------------------------------------------
 Library
-    Ghc-Options:       -O2
-    Hs-Source-Dirs:    src
-    Exposed-Modules:   Data.ByteString.Lex.Integral
-                       Data.ByteString.Lex.Fractional
+    Ghc-Options:     -O2
+    Hs-Source-Dirs:  src
+    Exposed-Modules: Data.ByteString.Lex.Integral
+                     Data.ByteString.Lex.Fractional
+    Other-Modules:   Data.ByteString.Lex.Internal
     
     -- Should actually be able to work as far back as base-2.0...
     Build-Depends: base >= 4 && < 5, bytestring

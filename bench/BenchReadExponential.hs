@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE CPP, ScopedTypeVariables #-}
 ----------------------------------------------------------------
---                                                    2015.06.04
+--                                                    2015.06.05
 -- |
 -- Module      :  BenchReadExponential
 -- Copyright   :  Copyright (c) 2015 wren gayle romano,
@@ -18,14 +18,15 @@ module BenchReadExponential (main) where
 
 import           Criterion.Main
 import           Control.DeepSeq                         (NFData)
+import           Data.Proxy                              (Proxy(Proxy))
 import           Data.ByteString                         (ByteString)
 import qualified Data.ByteString                         as BS
 import qualified Data.ByteString.Char8                   as BS8
 import qualified Test.QuickCheck                         as QC
 import qualified Data.ByteString.Read                    as BSRead
 import qualified BenchReadExponential.Double             as BSLexOld
-import qualified BenchReadExponential.NewImplementations as BSLexNew
-import qualified Data.ByteString.Lex.Integral            as BSLex
+import qualified BenchReadExponential.NewImplementations as BSLexTest
+import qualified Data.ByteString.Lex.Fractional          as BSLex
 
 -- N.B., ./dist/build/autogen/cabal_macros.h defines the VERSION_foo macros as well as the MIN_VERSION_foo(x,y,z) macros
 
@@ -54,49 +55,71 @@ atRational = id
 s_fractional             :: (BSRead.ReadFractional a) => ByteString -> a
 s_fractional             = unwrap . BSRead.signed BSRead.fractional
 
--- The old version used by bytestring-lexing
+-- The old version used by bytestring-lexing <= 0.4.3.3
 readDouble               :: ByteString -> Double
 readDouble               = unwrap . BSLexOld.readDouble
 
--- The new versions being compared
-s_readExponential1  :: Fractional a => ByteString -> a
-s_readExponential1  = unwrap . BSLex.readSigned BSLexNew.readExponential1
-s_readExponential11 :: Fractional a => ByteString -> a
-s_readExponential11 = unwrap . BSLex.readSigned BSLexNew.readExponential11
-s_readExponential2  :: Fractional a => ByteString -> a
-s_readExponential2  = unwrap . BSLex.readSigned BSLexNew.readExponential2
-s_readExponential3  :: Fractional a => ByteString -> a
-s_readExponential3  = unwrap . BSLex.readSigned BSLexNew.readExponential3
-s_readExponential31 :: Fractional a => ByteString -> a
-s_readExponential31 = unwrap . BSLex.readSigned BSLexNew.readExponential31
-s_readExponential32 :: Fractional a => ByteString -> a
-s_readExponential32 = unwrap . BSLex.readSigned BSLexNew.readExponential32
-s_readExponential4  :: RealFloat a => ByteString -> a
-s_readExponential4  = unwrap . BSLex.readSigned BSLexNew.readExponential4
+-- The versions used by the current version of bytestring-lexing
+s_readExpCurrent        :: Fractional a => ByteString -> a
+s_readExpCurrent        = unwrap . BSLex.readSigned BSLex.readExponential
+
+float_s_readExpLimCurrent :: ByteString -> Float
+float_s_readExpLimCurrent =
+    unwrap . BSLex.readSigned
+        (BSLex.readExponentialLimited
+            (BSLex.decimalPrecision (Proxy::Proxy Float)))
+double_s_readExpLimCurrent :: ByteString -> Double
+double_s_readExpLimCurrent =
+    unwrap . BSLex.readSigned
+        (BSLex.readExponentialLimited
+            (BSLex.decimalPrecision (Proxy::Proxy Double)))
+
+s_readExpLimInftyCurrent :: Fractional a => ByteString -> a
+s_readExpLimInftyCurrent =
+    unwrap . BSLex.readSigned
+        (\xs -> BSLex.readExponentialLimited (1 + BS.length xs) xs)
+
+-- The test versions being compared
+s_readExpTest1  :: Fractional a => ByteString -> a
+s_readExpTest1  = unwrap . BSLex.readSigned BSLexTest.readExponential1
+s_readExpTest11 :: Fractional a => ByteString -> a
+s_readExpTest11 = unwrap . BSLex.readSigned BSLexTest.readExponential11
+s_readExpTest12 :: Fractional a => ByteString -> a
+s_readExpTest12 = unwrap . BSLex.readSigned BSLexTest.readExponential12
+s_readExpTest2  :: Fractional a => ByteString -> a
+s_readExpTest2  = unwrap . BSLex.readSigned BSLexTest.readExponential2
+s_readExpTest3  :: Fractional a => ByteString -> a
+s_readExpTest3  = unwrap . BSLex.readSigned BSLexTest.readExponential3
+s_readExpTest31 :: Fractional a => ByteString -> a
+s_readExpTest31 = unwrap . BSLex.readSigned BSLexTest.readExponential31
+s_readExpTest32 :: Fractional a => ByteString -> a
+s_readExpTest32 = unwrap . BSLex.readSigned BSLexTest.readExponential32
+s_readExpTest4  :: RealFloat a => ByteString -> a
+s_readExpTest4  = unwrap . BSLex.readSigned BSLexTest.readExponential4
 
 
 limit :: RealFloat a => a -> Int
 limit proxy = length (show (floatRadix proxy ^ floatDigits proxy))
 
-float_s_readExponential41 :: ByteString -> Float
-float_s_readExponential41 =
-    unwrap . BSLex.readSigned (BSLexNew.readExponential41 (limit (undefined::Float)))
-double_s_readExponential41 :: ByteString -> Double
-double_s_readExponential41 =
-    unwrap . BSLex.readSigned (BSLexNew.readExponential41 (limit (undefined::Double)))
-rational_s_readExponential41 :: ByteString -> Rational
-rational_s_readExponential41 =
-    unwrap . BSLex.readSigned (\xs -> BSLexNew.readExponential41 (1 + BS.length xs) xs)
+float_s_readExpTest41 :: ByteString -> Float
+float_s_readExpTest41 =
+    unwrap . BSLex.readSigned (BSLexTest.readExponential41 (limit (undefined::Float)))
+double_s_readExpTest41 :: ByteString -> Double
+double_s_readExpTest41 =
+    unwrap . BSLex.readSigned (BSLexTest.readExponential41 (limit (undefined::Double)))
+rational_s_readExpTest41 :: ByteString -> Rational
+rational_s_readExpTest41 =
+    unwrap . BSLex.readSigned (\xs -> BSLexTest.readExponential41 (1 + BS.length xs) xs)
 
-float_s_readExponential42 :: ByteString -> Float
-float_s_readExponential42 =
-    unwrap . BSLex.readSigned (BSLexNew.readExponential42 (limit (undefined::Float)))
-double_s_readExponential42 :: ByteString -> Double
-double_s_readExponential42 =
-    unwrap . BSLex.readSigned (BSLexNew.readExponential42 (limit (undefined::Double)))
-rational_s_readExponential42 :: ByteString -> Rational
-rational_s_readExponential42 =
-    unwrap . BSLex.readSigned (\xs -> BSLexNew.readExponential42 (1 + BS.length xs) xs)
+float_s_readExpTest42 :: ByteString -> Float
+float_s_readExpTest42 =
+    unwrap . BSLex.readSigned (BSLexTest.readExponential42 (limit (undefined::Float)))
+double_s_readExpTest42 :: ByteString -> Double
+double_s_readExpTest42 =
+    unwrap . BSLex.readSigned (BSLexTest.readExponential42 (limit (undefined::Double)))
+rational_s_readExpTest42 :: ByteString -> Rational
+rational_s_readExpTest42 =
+    unwrap . BSLex.readSigned (\xs -> BSLexTest.readExponential42 (1 + BS.length xs) xs)
 
 ----------------------------------------------------------------
 ----------------------------------------------------------------
@@ -126,45 +149,61 @@ runQuickCheckTests = do
     putStrLn "Checking BSLexOld.readDouble..."
     QC.quickCheck (prop_read_show_idempotent readDouble)
     --
+    putStrLn "Checking BSLex.readExponential..."
+    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExpCurrent)
+    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExpCurrent)
+    --
+    putStrLn "Checking BSLex.readExponentialLimited@decimalPrecision..."
+    QC.quickCheck (prop_read_show_idempotent $ float_s_readExpLimCurrent)
+    QC.quickCheck (prop_read_show_idempotent $ double_s_readExpLimCurrent)
+    --
+    putStrLn "Checking BSLex.readExponentialLimited@infinity..."
+    QC.quickCheck (prop_read_show_idempotent $ atFloat s_readExpLimInftyCurrent)
+    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExpLimInftyCurrent)
+    --
     putStrLn "Checking BSRead.fractional..."
     QC.quickCheck (prop_read_show_idempotent $ atFloat  s_fractional)
     QC.quickCheck (prop_read_show_idempotent $ atDouble s_fractional)
     --
     putStrLn "Checking readExponential1..."
-    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExponential1)
-    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExponential1)
+    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExpTest1)
+    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExpTest1)
     --
     putStrLn "Checking readExponential11..."
-    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExponential11)
-    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExponential11)
+    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExpTest11)
+    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExpTest11)
+    --
+    putStrLn "Checking readExponential12..."
+    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExpTest12)
+    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExpTest12)
     --
     putStrLn "Checking readExponential2..."
-    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExponential2)
-    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExponential2)
+    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExpTest2)
+    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExpTest2)
     --
     putStrLn "Checking readExponential3..."
-    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExponential3)
-    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExponential3)
+    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExpTest3)
+    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExpTest3)
     --
     putStrLn "Checking readExponential31..."
-    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExponential31)
-    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExponential31)
+    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExpTest31)
+    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExpTest31)
     --
     putStrLn "Checking readExponential32..."
-    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExponential32)
-    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExponential32)
+    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExpTest32)
+    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExpTest32)
     --
     putStrLn "Checking readExponential4..."
-    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExponential4)
-    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExponential4)
+    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExpTest4)
+    QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExpTest4)
     --
     putStrLn "Checking readExponential41..."
-    QC.quickCheck (prop_read_show_idempotent $ float_s_readExponential41)
-    QC.quickCheck (prop_read_show_idempotent $ double_s_readExponential41)
+    QC.quickCheck (prop_read_show_idempotent $ float_s_readExpTest41)
+    QC.quickCheck (prop_read_show_idempotent $ double_s_readExpTest41)
     --
     putStrLn "Checking readExponential42..."
-    QC.quickCheck (prop_read_show_idempotent $ float_s_readExponential42)
-    QC.quickCheck (prop_read_show_idempotent $ double_s_readExponential42)
+    QC.quickCheck (prop_read_show_idempotent $ float_s_readExpTest42)
+    QC.quickCheck (prop_read_show_idempotent $ double_s_readExpTest42)
 
 ----------------------------------------------------------------
 
@@ -196,54 +235,71 @@ runCriterionTests = defaultMain
         , benches "Double"   $ atDouble   s_fractional
         , benches "Rational" $ atRational s_fractional
         ]
+    , bgroup ("bytestring-lexing-" ++ VERSION_bytestring_lexing ++ ":readExponential") $ concat
+        [ benches "Float"    $ atFloat    s_readExpCurrent
+        , benches "Double"   $ atDouble   s_readExpCurrent
+        , benches "Rational" $ atRational s_readExpCurrent
+        ]
+    , bgroup ("bytestring-lexing-" ++ VERSION_bytestring_lexing ++ ":readExpLim@inherent") $ concat
+        [ benches "Float"    $ float_s_readExpLimCurrent
+        , benches "Double"   $ double_s_readExpLimCurrent
+        ]
+    , bgroup ("bytestring-lexing-" ++ VERSION_bytestring_lexing ++ ":readExpLim@infinity") $ concat
+        [ benches "Float"    $ atFloat    s_readExpLimInftyCurrent
+        , benches "Double"   $ atDouble   s_readExpLimInftyCurrent
+        , benches "Rational" $ atRational s_readExpLimInftyCurrent
+        ]
     {-
     , bgroup "readExponential1" $ concat
-        [ benches "Float"    $ atFloat    s_readExponential1
-        , benches "Double"   $ atDouble   s_readExponential1
-        , benches "Rational" $ atRational s_readExponential1
+        [ benches "Float"    $ atFloat    s_readExpTest1
+        , benches "Double"   $ atDouble   s_readExpTest1
+        , benches "Rational" $ atRational s_readExpTest1
         ]
-    -}
     , bgroup "readExponential11" $ concat
-        [ benches "Float"    $ atFloat    s_readExponential11
-        , benches "Double"   $ atDouble   s_readExponential11
-        , benches "Rational" $ atRational s_readExponential11
+        [ benches "Float"    $ atFloat    s_readExpTest11
+        , benches "Double"   $ atDouble   s_readExpTest11
+        , benches "Rational" $ atRational s_readExpTest11
         ]
-    {-
+    , bgroup "readExponential12" $ concat
+        [ benches "Float"    $ atFloat    s_readExpTest12
+        , benches "Double"   $ atDouble   s_readExpTest12
+        , benches "Rational" $ atRational s_readExpTest12
+        ]
     , bgroup "readExponential2" $ concat
-        [ benches "Float"    $ atFloat    s_readExponential2
-        , benches "Double"   $ atDouble   s_readExponential2
-        , benches "Rational" $ atRational s_readExponential2
+        [ benches "Float"    $ atFloat    s_readExpTest2
+        , benches "Double"   $ atDouble   s_readExpTest2
+        , benches "Rational" $ atRational s_readExpTest2
         ]
     , bgroup "readExponential3" $ concat
-        [ benches "Float"    $ atFloat    s_readExponential3
-        , benches "Double"   $ atDouble   s_readExponential3
-        , benches "Rational" $ atRational s_readExponential3
+        [ benches "Float"    $ atFloat    s_readExpTest3
+        , benches "Double"   $ atDouble   s_readExpTest3
+        , benches "Rational" $ atRational s_readExpTest3
         ]
     , bgroup "readExponential31" $ concat
-        [ benches "Float"    $ atFloat    s_readExponential31
-        , benches "Double"   $ atDouble   s_readExponential31
-        , benches "Rational" $ atRational s_readExponential31
+        [ benches "Float"    $ atFloat    s_readExpTest31
+        , benches "Double"   $ atDouble   s_readExpTest31
+        , benches "Rational" $ atRational s_readExpTest31
         ]
     , bgroup "readExponential32" $ concat
-        [ benches "Float"    $ atFloat    s_readExponential32
-        , benches "Double"   $ atDouble   s_readExponential32
-        , benches "Rational" $ atRational s_readExponential32
+        [ benches "Float"    $ atFloat    s_readExpTest32
+        , benches "Double"   $ atDouble   s_readExpTest32
+        , benches "Rational" $ atRational s_readExpTest32
         ]
     , bgroup "readExponential4" $ concat
-        [ benches "Float"    $ atFloat    s_readExponential4
-        , benches "Double"   $ atDouble   s_readExponential4
+        [ benches "Float"    $ atFloat    s_readExpTest4
+        , benches "Double"   $ atDouble   s_readExpTest4
         ]
-    -}
     , bgroup "readExponential41" $ concat
-        [ benches "Float"    $ float_s_readExponential41
-        , benches "Double"   $ double_s_readExponential41
-        , benches "Rational" $ rational_s_readExponential41
+        [ benches "Float"    $ float_s_readExpTest41
+        , benches "Double"   $ double_s_readExpTest41
+        , benches "Rational" $ rational_s_readExpTest41
         ]
     , bgroup "readExponential42" $ concat
-        [ benches "Float"    $ float_s_readExponential42
-        , benches "Double"   $ double_s_readExponential42
-        , benches "Rational" $ rational_s_readExponential42
+        [ benches "Float"    $ float_s_readExpTest42
+        , benches "Double"   $ double_s_readExpTest42
+        , benches "Rational" $ rational_s_readExpTest42
         ]
+    -}
     ]
 
 main :: IO ()

@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 ----------------------------------------------------------------
---                                                    2015.06.04
+--                                                    2015.06.05
 -- |
 -- Module      :  BenchReadExponential.NewImplementations
 -- Copyright   :  Copyright (c) 2015 wren gayle romano,
@@ -16,14 +16,14 @@
 module BenchReadExponential.NewImplementations
     ( readExponential1
     , readExponential11 -- Implementation of choice for general fractional
+    , readExponential12
     , readExponential2
     , readExponential3
     , readExponential31
     , readExponential32
     , readExponential4
-    , readExponential41 -- Implementation of choice for limited precision
-    -- TODO: a version of readExponential41 which always does infinite precision; can give NaNs instead of Inftys, but that may be acceptable? The big reason to try this is in case dropping the extra variable lets us avoid spilling registers. Could also actually try looking at the assembly...
-    , readExponential42
+    , readExponential41
+    , readExponential42 -- Implementation of choice for limited precision
     --
     , decimalPrecision
     ) where
@@ -771,6 +771,78 @@ readExponential42 = start
     where
     start p xs =
         case readDecimal42 p xs of
+        Nothing       -> Nothing
+        Just (df,xs') -> Just $! readExponentPart df xs'
+    
+    readExponentPart df xs
+        | BS.null xs                 = pair (fromDF df) BS.empty
+        | isNotE (BSU.unsafeHead xs) = pair (fromDF df) xs
+        | otherwise                  =
+            -- HACK: monomorphizing at 'Int'
+            -- TODO: how to handle too-large exponents?
+            case BSLex.readSigned BSLex.readDecimal (BSU.unsafeTail xs) of
+            Nothing           -> pair (fromDF df) xs
+            Just (scale, xs') -> pair (fromDF $ scaleDF df scale) xs'
+
+----------------------------------------------------------------
+-- | A variant of 'readDecimal42' assuming infinite precision. For correctness vs 'readDecimal1' and benchmarking vs 'readExponential11'
+--
+-- Results: this is /way/ worse for Float\/Double; is identical on Rational (as expected since we're faking infinite precision in our testing of 'readExponential42' for Rationals). Also, still gives NaN for 'Float'.
+readDecimal12 :: (Fractional a) => ByteString -> Maybe (DecimalFraction a, ByteString)
+{-# SPECIALIZE readDecimal12 ::
+    ByteString -> Maybe (DecimalFraction Float,    ByteString),
+    ByteString -> Maybe (DecimalFraction Double,   ByteString),
+    ByteString -> Maybe (DecimalFraction Rational, ByteString) #-}
+readDecimal12 = start
+    where
+    -- All calls to 'BSLex.readDecimal' are monomorphized at 'Integer', as specified by what 'DF' needs.
+    start xs =
+        case lengthDropWhile isDecimalZero xs of
+        (0, _)  -> readWholePart xs
+        (_, ys) ->
+            case BS.uncons ys of
+            Nothing              -> justPair (DF 0 0) BS.empty
+            Just (y0,ys0)
+                | isDecimal   y0 -> readWholePart ys
+                | isNotPeriod y0 -> justPair (DF 0 0) ys
+                | otherwise      ->
+                    case lengthDropWhile isDecimalZero ys0 of
+                    (0,     _)   -> readFractionPart 0 ys
+                    (scale, zs)  ->
+                        case BSLex.readDecimal zs of
+                        Nothing         -> justPair (DF 0 0) zs
+                        Just (part, ws) ->
+                            let scale' = scale + BS.length zs - BS.length ws
+                            in  justPair (DF part (negate scale')) ws
+    
+    readWholePart xs =
+        case BSLex.readDecimal xs of
+        Nothing          -> Nothing
+        Just (whole, ys)
+            | BS.null ys -> justPair (DF whole 0) BS.empty
+            | otherwise  ->
+                if isPeriod (BSU.unsafeHead ys)
+                then readFractionPart whole ys
+                else justPair (DF whole 0) ys
+
+    readFractionPart whole xs =
+        case BSLex.readDecimal (BSU.unsafeTail xs) of
+        Nothing         -> justPair (DF whole 0) xs
+        Just (part, ys) ->
+            let scale = BS.length xs - 1 - BS.length ys
+            in  justPair (fractionDF whole scale part) ys
+                
+
+-- | A variant of 'readExponential11' using 'readDecimal12'.
+readExponential12 :: (Fractional a) => ByteString -> Maybe (a, ByteString)
+{-# SPECIALIZE readExponential12 ::
+    ByteString -> Maybe (Float,    ByteString),
+    ByteString -> Maybe (Double,   ByteString),
+    ByteString -> Maybe (Rational, ByteString) #-}
+readExponential12 = start
+    where
+    start xs =
+        case readDecimal12 xs of
         Nothing       -> Nothing
         Just (df,xs') -> Just $! readExponentPart df xs'
     

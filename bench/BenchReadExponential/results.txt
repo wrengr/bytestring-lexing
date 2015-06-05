@@ -1,0 +1,55 @@
+readExponential41_infty = (\xs -> maybe undefined fst $ readExponential41 (1 + BS.length xs) xs)
+
+> short
+"2342395232123424.3424346343524e3"
+> readExponential41_infty short :: Float
+2.3423954e18 -- off by 1
+> readExponential41 magic short :: Float
+2.3423952e18 -- check
+> fromRational (readExponential41_infty short) :: Float
+2.3423952e18
+> (fromRational . toRational . maybe undefined fst . readDouble) short :: Float
+2.3423952e18
+> readExponential42_infty short :: Float
+2.3423954e18 -- off by 1
+
+2.3423952321234243e18 -- readDouble        short
+2.3423952321234243e18 -- readExponential1  short @ Double
+2.3423952321234243e18 -- readExponential11 short @ Double
+2.3423952321234243e18 -- readExponential2  short @ Double
+2.3423952321234243e18 -- readExponential3  short @ Double
+2.3423952321234243e18 -- readExponential31 short @ Double
+2.3423952321234243e18 -- readExponential32 short @ Double
+2.3423952321234237e18 -- readExponential4  short @ Double -- off by 2
+2.3423952321234237e18 -- readExponential41 magic short @ Double -- off by 2
+2.3423952321234243e18 -- readExponential41 infty short @ Double
+2.3423952321234243e18 -- readExponential41 infty short @fromRational::Double
+2.3423952321234243e18 -- readExponential42 infty short @ Double
+
+
+> long
+"234232345678976521345895325678987654321345678987654321345689643213595232123424.34243463435223456789321367899231808534492500740957389523850293482093852039587495203586329850238562834290374029844e3"
+> readExponential41_infty long :: Float
+NaN      -- N.B., this agrees with readExponential{1,11,2,3,31,32}
+> readExponential41 magic long :: Float
+Infinity
+> fromRational (readExponential41_infty long) :: Float
+Infinity
+> (fromRational . toRational . maybe undefined fst . readDouble) long :: Float
+Infinity
+> readExponential42_infty long :: Float
+NaN
+
+
+2.3423234567897652e80 -- readDouble        short
+2.342323456789765e80  -- readExponential1  long @ Double
+2.342323456789765e80  -- readExponential11 long @ Double
+2.342323456789765e80  -- readExponential2  long @ Double
+2.342323456789765e80  -- readExponential3  long @ Double
+2.3423234567897644e80 -- readExponential31 long @ Double
+2.3423234567897647e80 -- readExponential32 long @ Double
+2.3423234567897655e80 -- readExponential4  long @ Double -- off by 1
+2.3423234567897655e80 -- readExponential41 magic long @ Double -- off by 1
+2.3423234567897644e80 -- readExponential41 infty long @ Double -- off by 2
+2.3423234567897652e80 -- readExponential41 infty long @ fromRational::Double
+2.3423234567897644e80 -- readExponential42 infty long @ Double -- off by 2
