@@ -24,6 +24,8 @@ module BenchReadExponential.NewImplementations
     , readExponential41 -- Implementation of choice for limited precision
     -- TODO: a version of readExponential41 which always does infinite precision; can give NaNs instead of Inftys, but that may be acceptable? The big reason to try this is in case dropping the extra variable lets us avoid spilling registers. Could also actually try looking at the assembly...
     , readExponential42
+    --
+    , decimalPrecision
     ) where
 
 import           Data.ByteString              (ByteString)
@@ -51,13 +53,17 @@ pair x y
 
 
 -- Predicates we use often
+{-# INLINE isPeriod #-}
+isPeriod :: Word8 -> Bool
+isPeriod w = w == 0x2E
+
 {-# INLINE isNotPeriod #-}
 isNotPeriod :: Word8 -> Bool
-isNotPeriod w = 0x2E /= w
+isNotPeriod w = w /= 0x2E
 
 {-# INLINE isNotE #-}
 isNotE :: Word8 -> Bool
-isNotE w = 0x65 /= w && 0x45 /= w
+isNotE w = w /= 0x65 && w /= 0x45
 
 {-# INLINE isDecimal #-}
 isDecimal :: Word8 -> Bool
@@ -65,7 +71,7 @@ isDecimal w = 0x39 >= w && w >= 0x30
 
 {-# INLINE isDecimalZero #-}
 isDecimalZero :: Word8 -> Bool
-isDecimalZero w = w >= 0x30
+isDecimalZero w = w == 0x30
 
 ----------------------------------------------------------------
 -- | Version 1 of trying to speed things up. Is 3~3.5x faster than
@@ -278,7 +284,7 @@ readExponential4 = start
         | otherwise  = readExponentPart frac scale $!
             if isNotPeriod (BSU.unsafeHead xs)
             then xs
-            else BS.dropWhile isDecimal (BSU.unsafeTail xs)
+            else BS.dropWhile isDecimal (BSU.unsafeTail xs) -- N.B., buggy!
     
     readFractionPart :: Word64 -> Int -> ByteString -> (a, ByteString)
     readFractionPart frac len xs
@@ -577,7 +583,7 @@ readDecimal41 = start
         | otherwise  = pair (DF whole scale) $!
             if isNotPeriod (BSU.unsafeHead xs)
             then xs
-            else BS.dropWhile isDecimal (BSU.unsafeTail xs)
+            else BS.dropWhile isDecimal (BSU.unsafeTail xs) -- N.B., is buggy
     
     readFractionPart p whole xs
         | p `seq` whole `seq` False       = undefined
@@ -648,6 +654,30 @@ decimalPrecision =
 
 
 ----------------------------------------------------------------
+
+-- TODO: use 'BS.breakByte' where possible; or design our own similar...
+-- BUG: can't use 'BS.break'...
+-- | Break on the predicate (i.e., 'takeWhile' it is false!), returning the length of what matched and then the remainder that didn't
+lengthDropWhile :: (Word8 -> Bool) -> ByteString -> (Int, ByteString)
+{-# INLINE lengthDropWhile #-}
+lengthDropWhile p xs =
+    let ys = BS.dropWhile p xs
+    in (BS.length xs - BS.length ys, ys)
+    {-
+    -- TODO: benchmark
+    let len = BS.length (BS.takeWhile p xs)
+    in (len, BS.drop len xs)
+    -}
+
+-- Some test cases to ensure we hit most\/all branches:
+-- > let c = "01a." in concat [ Control.Monad.replicateM i c | i <- [0..4]]
+-- TODO: add HUnit tests for these sorts of things; especially "0.", ".", "0.a", "01.", and "0.01" Also, use HPC on those tests
+--
+-- A good testcase for the leading zeroes:
+-- > readExponential41 10 $ BS8.pack "0000000000000000000000000.123456789"
+-- > readExponential42 10 $ BS8.pack "0000000000000000000000000.123456789"
+-- N.B., for this test readExponential11 and readExponential42 are correct, but readExponential41 is wrong
+
 -- | A variant of 'readDecimal41' trying to fix the bug about leading zeros. Also the other bug about accepting @\"[0-9]+\\.[^0-9].*\"@.
 readDecimal42 :: (Fractional a) => Int -> ByteString -> Maybe (DecimalFraction a, ByteString)
 {-# SPECIALIZE readDecimal42 ::
@@ -656,61 +686,52 @@ readDecimal42 :: (Fractional a) => Int -> ByteString -> Maybe (DecimalFraction a
     Int -> ByteString -> Maybe (DecimalFraction Rational, ByteString) #-}
 readDecimal42 = start
     where
-    -- BUG: accepts @\"0\\..*\"@ as zero and discards the @\".*\"@!
-    -- BUG: seems to accept everything other than the empty string (as zero and discarding everything)!!!
+    -- All calls to 'BSLex.readDecimal' are monomorphized at 'Integer', as specified by what 'DF' needs.
     
-    -- TODO: verify this is ~inferred~ strict in both @p@ and @xs@
+    -- TODO: verify this is ~inferred~ strict in both @p@ and @xs@ without the guard trick or BangPatterns
     start p xs
         | p `seq` xs `seq` False = undefined
-        | BS.null xs = Nothing
-        | isDecimalZero (BSU.unsafeHead xs) =
-            afterDroppingZeroes p
-                (BS.dropWhile isDecimalZero (BSU.unsafeTail xs))
-        | otherwise = readWholePart p xs
-    
-    -- The @-1@ in defining @scale@ is for the 'BSU.unsafeTail in @ys@
-    -- The @+1@ in the final drop is for the 'BSU.unsafeTail' in @ys@
-    -- Monomorphized @part::Integer@, via the type of 'DF'.
-    afterDroppingZeroes p xs
-        | BS.null xs                      = justPair (DF 0 0) BS.empty
-        | isDecimal   (BSU.unsafeHead xs) = readWholePart p xs
-        | isNotPeriod (BSU.unsafeHead xs) = justPair (DF 0 0) xs
         | otherwise =
-            let ys    = BS.dropWhile isDecimalZero (BSU.unsafeTail xs)
-                scale = BS.length xs - 1 - BS.length ys
-            in if BS.null ys
-            then justPair (DF 0 0) BS.empty
-            else    
-                case BSLex.readDecimal ys of
-                Nothing
-                    | 0 == scale -> justPair (DF 0 0) xs
-                    | otherwise  -> justPair (DF 0 0) ys
-                Just (part, ys') ->
-                    let scale' = scale + BS.length ys - BS.length ys'
-                    in  justPair (DF part (negate scale'))
-                            (BS.dropWhile isDecimal (BS.drop (1+scale') xs))
+            case lengthDropWhile isDecimalZero xs of
+            (0, _)  -> readWholePart p xs
+            (_, ys) ->
+                case BS.uncons ys of
+                Nothing              -> justPair (DF 0 0) BS.empty
+                Just (y0,ys0)
+                    | isDecimal   y0 -> readWholePart p ys
+                    | isNotPeriod y0 -> justPair (DF 0 0) ys
+                    | otherwise      ->
+                        case lengthDropWhile isDecimalZero ys0 of
+                        (0,     _)   -> readFractionPart p 0 ys
+                        (scale, zs)  -> afterDroppingZeroes p scale zs
     
-    -----
-    -- Monomorphized @whole::Integer@, via the type of 'DF'.
+    afterDroppingZeroes p scale xs =
+        let ys = BS.take p xs in
+        case BSLex.readDecimal ys of
+        Nothing          -> justPair (DF 0 0) xs
+        Just (part, ys') ->
+            let scale' = scale + BS.length xs - BS.length ys'
+            in  justPair (DF part (negate scale'))
+                    (BS.dropWhile isDecimal ys')
+    
     readWholePart p xs =
         let ys = BS.take p xs in
         case BSLex.readDecimal ys of
         Nothing           -> Nothing
         Just (whole, ys')
             | BS.null ys' ->
-                let scale = BS.length
-                          . BS.takeWhile isDecimal
-                          $ BS.drop p xs
-                in justPair (DF whole scale)
-                        (dropFractionPart (BS.drop (p+scale) xs))
+                case lengthDropWhile isDecimal (BS.drop p xs) of
+                (scale, zs) ->
+                    justPair (DF whole scale) (dropFractionPart zs)
             | otherwise  ->
                 let len = BS.length ys - BS.length ys'
+                    -- N.B., @xs' == ys' `BS.append` BS.drop p xs@
                     xs' = BS.drop len xs
                 in
-                -- N.B., @BS.null xs'@ is impossible. Were it to happen then returning @pair (DF whole 0) BS.empty@ is fine (i.e., consistent with the dropFractionPart definition when the original input is less than the original @p@ long).
-                if isNotPeriod (BSU.unsafeHead xs')
-                then justPair (DF whole 0) xs'
-                else readFractionPart (p-len) whole xs'
+                -- N.B., @BS.null xs'@ is impossible. Were it to happen then returning @pair (DF whole 0) BS.empty@ is consistent with the branch where we drop the fraction part (the original input is less than the original @p@ long); however, reaching this branch via that input would be a control-flow error.
+                if isPeriod (BSU.unsafeHead xs')
+                then readFractionPart (p-len) whole xs'
+                else justPair (DF whole 0) xs'
 
     -- TODO: verify that 'BS.uncons' is inlined and that the intermediate @Maybe(,)@ it returns is fused away
     dropFractionPart xs =
@@ -720,13 +741,12 @@ readDecimal42 = start
             | isNotPeriod x0       -> xs
             | otherwise            ->
                 case BS.uncons xs0 of
-                Nothing            -> BS.pack [0x2E] -- == xs
+                Nothing            -> BS.singleton 0x2E -- == xs
                 Just (x1,xs1)
                     | isDecimal x1 -> BS.dropWhile isDecimal xs1
                     | otherwise    -> xs
     
-    -- N.B., @BS.null xs@ is impossible; see the call site.
-    -- Monomorphized @part::Integer@, via the type of 'DF'.
+    -- N.B., @BS.null xs@ is impossible as it begins with a period; see the call sites.
     -- If @not (BS.null ys')@ then the @BS.dropWhile isDecimal@ is a noop; but there's no reason to branch on testing for that.
     -- The @+1@ in @BS.drop (1+scale)@ is for the 'BSU.unsafeTail' in @ys@.
     readFractionPart p whole xs =
