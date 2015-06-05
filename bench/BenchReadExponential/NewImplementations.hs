@@ -656,39 +656,44 @@ readDecimal42 :: (Fractional a) => Int -> ByteString -> Maybe (DecimalFraction a
     Int -> ByteString -> Maybe (DecimalFraction Rational, ByteString) #-}
 readDecimal42 = start
     where
-    -- BUG: need to deal with leading zeros re @p@
-    -- TODO: verify this is inferred strict in both @p@ and @xs@
-    start p xs =
-    {-
+    -- BUG: accepts @\"0\\..*\"@ as zero and discards the @\".*\"@!
+    -- BUG: seems to accept everything other than the empty string (as zero and discarding everything)!!!
+    
+    -- TODO: verify this is ~inferred~ strict in both @p@ and @xs@
+    start p xs
         | p `seq` xs `seq` False = undefined
         | BS.null xs = Nothing
-        | otherwise  = afterDroppingZeroes p (BS.dropWhile isDecimalZero xs)
+        | isDecimalZero (BSU.unsafeHead xs) =
+            afterDroppingZeroes p
+                (BS.dropWhile isDecimalZero (BSU.unsafeTail xs))
+        | otherwise = readWholePart p xs
     
+    -- The @-1@ in defining @scale@ is for the 'BSU.unsafeTail in @ys@
+    -- The @+1@ in the final drop is for the 'BSU.unsafeTail' in @ys@
+    -- Monomorphized @part::Integer@, via the type of 'DF'.
     afterDroppingZeroes p xs
         | BS.null xs                      = justPair (DF 0 0) BS.empty
-        | isNotPeriod (BSU.unsafeHead xs) = readWholePart p xs
+        | isDecimal   (BSU.unsafeHead xs) = readWholePart p xs
+        | isNotPeriod (BSU.unsafeHead xs) = justPair (DF 0 0) xs
         | otherwise =
             let ys    = BS.dropWhile isDecimalZero (BSU.unsafeTail xs)
                 scale = BS.length xs - 1 - BS.length ys
-            in if BS.null ys then justPair (DF 0 0) BS.empty else
-            -- @part :: Integer@ because that's what 'DF' requires
-            case BSLex.readDecimal ys of
-            Nothing           -> justPair (DF 0 0) ys
-            Just (part, ys')
-                | BS.null ys' ->
-                    let scale = BS.length ys in
-                    pair (fractionDF whole scale part)
-                        (BS.dropWhile isDecimal (BS.drop (1+scale) xs))
-                | otherwise   ->
-                    let scale = BS.length ys - BS.length ys' in
-                    pair (fractionDF whole scale part)
-                        (BS.drop (1+scale) xs)
-            
+            in if BS.null ys
+            then justPair (DF 0 0) BS.empty
+            else    
+                case BSLex.readDecimal ys of
+                Nothing
+                    | 0 == scale -> justPair (DF 0 0) xs
+                    | otherwise  -> justPair (DF 0 0) ys
+                Just (part, ys') ->
+                    let scale' = scale + BS.length ys - BS.length ys'
+                    in  justPair (DF part (negate scale'))
+                            (BS.dropWhile isDecimal (BS.drop (1+scale') xs))
+    
     -----
+    -- Monomorphized @whole::Integer@, via the type of 'DF'.
     readWholePart p xs =
-    -}
         let ys = BS.take p xs in
-        -- @whole :: Integer@ because that's what 'DF' requires
         case BSLex.readDecimal ys of
         Nothing           -> Nothing
         Just (whole, ys')
@@ -697,7 +702,7 @@ readDecimal42 = start
                           . BS.takeWhile isDecimal
                           $ BS.drop p xs
                 in justPair (DF whole scale)
-                    (dropFractionPart (BS.drop (p+scale) xs))
+                        (dropFractionPart (BS.drop (p+scale) xs))
             | otherwise  ->
                 let len = BS.length ys - BS.length ys'
                     xs' = BS.drop len xs
@@ -719,20 +724,20 @@ readDecimal42 = start
                 Just (x1,xs1)
                     | isDecimal x1 -> BS.dropWhile isDecimal xs1
                     | otherwise    -> xs
-
+    
+    -- N.B., @BS.null xs@ is impossible; see the call site.
+    -- Monomorphized @part::Integer@, via the type of 'DF'.
+    -- If @not (BS.null ys')@ then the @BS.dropWhile isDecimal@ is a noop; but there's no reason to branch on testing for that.
+    -- The @+1@ in @BS.drop (1+scale)@ is for the 'BSU.unsafeTail' in @ys@.
     readFractionPart p whole xs =
-        -- N.B., @BS.null xs@ is impossible; see the call site.
         let ys = BS.take p (BSU.unsafeTail xs) in
-        -- @part :: Integer@ because that's what 'DF' requires
         case BSLex.readDecimal ys of
         Nothing          -> justPair (DF whole 0) xs
         Just (part, ys') ->
-            let scale = BS.length ys - BS.length ys' in
-            justPair (fractionDF whole scale part)
-                (BS.dropWhile isDecimal (BS.drop (1+scale) xs))
-                -- If @not (BS.null ys')@ then the @BS.dropWhile isDecimal@ is a noop. But executing that is prolly cheaper than duplicating this branch by testing @ys'@...
-                --
-                -- The @+1@ is for the 'BSU.unsafeTail' in @ys@.
+            let scale = BS.length ys - BS.length ys'
+            in  justPair (fractionDF whole scale part)
+                    (BS.dropWhile isDecimal (BS.drop (1+scale) xs))
+                
 
 
 -- | A variant of 'readExponential41' using 'readDecimal42'.
