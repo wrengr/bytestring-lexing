@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE CPP, ScopedTypeVariables #-}
 ----------------------------------------------------------------
 --                                                    2015.06.04
 -- |
@@ -9,7 +9,7 @@
 -- License     :  BSD2
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  benchmark
--- Portability :  ScopedTypeVariables
+-- Portability :  CPP, ScopedTypeVariables
 --
 -- Benchmark the speed of parsing floating point numbers. This
 -- benchmark originally came from @bytestring-read@ version 0.3.0.
@@ -26,6 +26,8 @@ import qualified Data.ByteString.Read                    as BSRead
 import qualified BenchReadExponential.Double             as BSLexOld
 import qualified BenchReadExponential.NewImplementations as BSLexNew
 import qualified Data.ByteString.Lex.Integral            as BSLex
+
+-- N.B., ./dist/build/autogen/cabal_macros.h defines the VERSION_foo macros as well as the MIN_VERSION_foo(x,y,z) macros
 
 ----------------------------------------------------------------
 ----------------------------------------------------------------
@@ -182,13 +184,14 @@ long = BS8.pack "-23423234567897652134589532567898765432134567898765432134568964
 -- Truncates to -2.3423234567897652e80 :: Double
 --              -Infinity              :: Float
 
+
 -- BUG: variance is always severely inflated by outliers... need a more reliable benchmark.
 runCriterionTests :: IO ()
 runCriterionTests = defaultMain
-    [ bgroup "bytestring-lexing:readDouble" $ concat
+    [ bgroup "bytestring-lexing-0.4.3.3:readDouble" $ concat
         [ benches "Double" readDouble
         ]
-    , bgroup "bytestring-read:fractional" $ concat
+    , bgroup ("bytestring-read-" ++ VERSION_bytestring_read ++ ":fractional") $ concat
         [ benches "Float"    $ atFloat    s_fractional
         , benches "Double"   $ atDouble   s_fractional
         , benches "Rational" $ atRational s_fractional

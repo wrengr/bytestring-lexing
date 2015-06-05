@@ -100,6 +100,7 @@ readDecimal1 xs0 =
             case BSLex.readDecimal (BSU.unsafeTail xs1) of
             Nothing          -> justPair (fromInteger whole) xs1
             Just (part, xs2) ->
+                -- TODO: this seems to be giving NaNs for Float. Could instead use @fromInteger(whole*base + part) / fromInteger base@ like we do in readDecimal4*. Would that fix things?
                 let base = 10 ^ (BS.length xs1 - 1 - BS.length xs2)
                     frac = fromInteger whole + (fromInteger part / base)
                 in justPair frac xs2
