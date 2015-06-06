@@ -13,6 +13,8 @@
     <h1>bytestring-lexing benchmarks</h1>
     <p>This page is a table of contents for browsing some of the benchmarks for the bytestring-lexing package. First, a description of the machines these benchmarks have been run on. If you would like to add yourself to the list below, just send me your Criterion report and the specs for your system.</p>
     <dl>
+        <dt>ereshkigal</dt>
+            <dd>OS X 10.10.3, Intel Core i7 2.5GHz, GHC 7.10.1 (64-bit)</dd>
         <dt>semiramis</dt>
             <dd>OS X 10.5.8, Intel Core 2 Duo 2.8GHz, GHC 6.12.1 (32-bit)</dd>
         <dt>megadodo</dt>
@@ -22,8 +24,9 @@
         <dt>bistromath-win32</dt>
             <dd>Windows XP 32-bit, Intel Core 2 E-8500 3.16GHz, GHC 7.0.4</dd>
     </dl>
+    
     <h1>BenchReadDecimal.hs</h1>
-    <p>N.B., the naming convention for the candidate implementations changed significantly between version 0.3 and 0.4. The old benchmarks are retained primarily to show the differences between different architectures running 64-bit Linux, as well as between the same architecture running under different operating systems.</p>
+    <p>N.B., the naming convention for the candidate implementations changed significantly between version 0.3 and 0.4. The old benchmarks are retained primarily to show the differences between different architectures running 64-bit Linux, as well as between the same architecture running under different operating systems. Nothing changed in version 0.5, the results are just provided for reference.</p>
     <ul>
         <li>bytestring-lexing-0.3.0:
             <span style="text-decoration: line-through;">[semiramis]</span>
@@ -33,9 +36,18 @@
         <li>bytestring-lexing-0.4.0:
             <a href="readDecimal-0.4.0_semiramis.html">[semiramis]</a>
             <a href="readDecimal-0.4.0_megadodo.html">[megadodo]</a></li>
+        <li>bytestring-lexing-0.5.0:
+            <a href="readDecimal-0.5.0_ereshkigal.html">[ereshkigal]</a></li>
+    </ul>
+    
+    <h1>BenchReadExponential.hs</h1>
+    <p>These files only show (1) the old implementation from bytestring-lexing-0.4.3.3, (2) the new/current bytestring-lexing implementation, and (3) various competitor libraries (of which bytestring-read is the main competitor). To see the non-winning candidate implementations, uncomment them in the benchmarking file. This benchmark is the same as <a href="http://philopon.github.io/bytestring-read/bench.html">bytestring-read's benchmark</a>.</p>
+    <ul>
+        <li>bytestring-lexing-0.5.0:
+            <a href="readExponential-0.5.0_ereshkigal.html">[ereshkigal]</a></li>
     </ul>
     <hr />
-    <div id="foot"><i>This page modified sometime since 2012.02.03</i></div>
+    <div id="foot"><i>This page modified sometime since 2015.06.05</i></div>
 </div>
 </body>
 </html>

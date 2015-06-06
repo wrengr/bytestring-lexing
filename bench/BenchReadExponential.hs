@@ -23,7 +23,14 @@ import           Data.ByteString                         (ByteString)
 import qualified Data.ByteString                         as BS
 import qualified Data.ByteString.Char8                   as BS8
 import qualified Test.QuickCheck                         as QC
+
+import qualified Data.Text                               as Text
+import qualified Data.Text.Read                          as Text
+import qualified Data.Text.Encoding                      as Text
+import qualified Data.Scientific                         as Sci
+import qualified Data.Attoparsec.ByteString.Char8        as Atto
 import qualified Data.ByteString.Read                    as BSRead
+
 import qualified BenchReadExponential.Double             as BSLexOld
 import qualified BenchReadExponential.NewImplementations as BSLexTest
 import qualified Data.ByteString.Lex.Fractional          as BSLex
@@ -40,6 +47,18 @@ unwrap (Just (n,xs))
     | BS.null xs = n
     | otherwise  = error ("input not fully parsed: " ++ BS8.unpack xs)
 
+unwrapText :: Either String (a, Text.Text) -> a
+{-# INLINE unwrapText #-}
+unwrapText (Left  _) = error "couldn't parse input at all"
+unwrapText (Right (n,xs))
+    | Text.null xs = n
+    | otherwise    = error ("input not fully parsed: " ++ Text.unpack xs)
+
+unwrapAtto :: Either String a -> a
+{-# INLINE unwrapAtto #-}
+unwrapAtto (Left  _) = error "couldn't parse input at all"
+unwrapAtto (Right n) = n
+
 -- Benchmarking indicates that using @atFoo@ does not affect performance compared to using top-level bindings to monomorphize the outputs.
 atFloat :: (a -> Float) -> a -> Float
 atFloat = id
@@ -52,12 +71,23 @@ atRational = id
     
 ----------------------------------------------------------------
 -- The version currently used by bytestring-read
-s_fractional             :: (BSRead.ReadFractional a) => ByteString -> a
-s_fractional             = unwrap . BSRead.signed BSRead.fractional
+bytestringRead :: (BSRead.ReadFractional a) => ByteString -> a
+bytestringRead = unwrap . BSRead.signed BSRead.fractional
+
+-- Other competitors bytestring-read compares against
+text :: ByteString -> Double
+text = unwrapText . Text.signed Text.double . Text.decodeUtf8
+
+attoparsec :: RealFloat a => ByteString -> a
+attoparsec = unwrapAtto . Atto.parseOnly (fmap Sci.toRealFloat Atto.scientific)
+
+read' :: (Read a, RealFloat a) => ByteString -> a
+read' = read . BS8.unpack
+
 
 -- The old version used by bytestring-lexing <= 0.4.3.3
-readDouble               :: ByteString -> Double
-readDouble               = unwrap . BSLexOld.readDouble
+bytestringLexing_old :: ByteString -> Double
+bytestringLexing_old = unwrap . BSLexOld.readDouble
 
 -- The versions used by the current version of bytestring-lexing
 s_readExpCurrent        :: Fractional a => ByteString -> a
@@ -146,24 +176,36 @@ prop_read_show_idempotent freader x =
 
 runQuickCheckTests :: IO ()
 runQuickCheckTests = do
-    putStrLn "Checking BSLexOld.readDouble..."
-    QC.quickCheck (prop_read_show_idempotent readDouble)
+    putStrLn "Checking bytestring-lexing-0.4.3.3:readDouble..."
+    QC.quickCheck (prop_read_show_idempotent bytestringLexing_old)
     --
-    putStrLn "Checking BSLex.readExponential..."
+    putStrLn ("Checking bytestring-lexing-" ++ VERSION_bytestring_lexing ++ ":readExponential")
     QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExpCurrent)
     QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExpCurrent)
     --
-    putStrLn "Checking BSLex.readExponentialLimited@decimalPrecision..."
-    QC.quickCheck (prop_read_show_idempotent $ float_s_readExpLimCurrent)
-    QC.quickCheck (prop_read_show_idempotent $ double_s_readExpLimCurrent)
-    --
-    putStrLn "Checking BSLex.readExponentialLimited@infinity..."
+    putStrLn ("Checking bytestring-lexing-" ++ VERSION_bytestring_lexing ++ ":readExponentialLimited@infinity...")
     QC.quickCheck (prop_read_show_idempotent $ atFloat s_readExpLimInftyCurrent)
     QC.quickCheck (prop_read_show_idempotent $ atDouble s_readExpLimInftyCurrent)
     --
-    putStrLn "Checking BSRead.fractional..."
-    QC.quickCheck (prop_read_show_idempotent $ atFloat  s_fractional)
-    QC.quickCheck (prop_read_show_idempotent $ atDouble s_fractional)
+    putStrLn ("Checking bytestring-lexing-" ++ VERSION_bytestring_lexing ++ ":readExponentialLimited@decimalPrecision...")
+    QC.quickCheck (prop_read_show_idempotent $ float_s_readExpLimCurrent)
+    QC.quickCheck (prop_read_show_idempotent $ double_s_readExpLimCurrent)
+    --
+    putStrLn ("Checking bytestring-read-" ++ VERSION_bytestring_read ++ ":fractional...")
+    QC.quickCheck (prop_read_show_idempotent $ atFloat  bytestringRead)
+    QC.quickCheck (prop_read_show_idempotent $ atDouble bytestringRead)
+    --
+    putStrLn ("Checking text-" ++ VERSION_text ++ ":double...")
+    QC.quickCheck (prop_read_show_idempotent text)
+    --
+    putStrLn ("Checking attoparsec-" ++ VERSION_attoparsec ++ ":scientific...")
+    QC.quickCheck (prop_read_show_idempotent $ atFloat  attoparsec)
+    QC.quickCheck (prop_read_show_idempotent $ atDouble attoparsec)
+    --
+    putStrLn ("Checking read..")
+    QC.quickCheck (prop_read_show_idempotent $ atFloat  read')
+    QC.quickCheck (prop_read_show_idempotent $ atDouble read')
+    --
     --
     putStrLn "Checking readExponential1..."
     QC.quickCheck (prop_read_show_idempotent $ atFloat  s_readExpTest1)
@@ -227,28 +269,40 @@ long = BS8.pack "-23423234567897652134589532567898765432134567898765432134568964
 -- BUG: variance is always severely inflated by outliers... need a more reliable benchmark.
 runCriterionTests :: IO ()
 runCriterionTests = defaultMain
-    [ bgroup "bytestring-lexing-0.4.3.3:readDouble" $ concat
-        [ benches "Double" readDouble
+    [ bgroup "read" $ concat
+        [ benches "Float"    $ atFloat    read'
+        , benches "Double"   $ atDouble   read'
+        ]
+    , bgroup ("attoparsec-" ++ VERSION_attoparsec ++ ":scientific") $ concat
+        [ benches "Float"    $ atFloat    attoparsec
+        , benches "Double"   $ atDouble   attoparsec
+        ]
+    , bgroup ("text-" ++ VERSION_text ++ ":double") $ concat
+        [ benches "Double" text
+        ]
+    , bgroup "bytestring-lexing-0.4.3.3:readDouble" $ concat
+        [ benches "Double" bytestringLexing_old
         ]
     , bgroup ("bytestring-read-" ++ VERSION_bytestring_read ++ ":fractional") $ concat
-        [ benches "Float"    $ atFloat    s_fractional
-        , benches "Double"   $ atDouble   s_fractional
-        , benches "Rational" $ atRational s_fractional
+        [ benches "Float"    $ atFloat    bytestringRead
+        , benches "Double"   $ atDouble   bytestringRead
+        , benches "Rational" $ atRational bytestringRead
         ]
     , bgroup ("bytestring-lexing-" ++ VERSION_bytestring_lexing ++ ":readExponential") $ concat
         [ benches "Float"    $ atFloat    s_readExpCurrent
         , benches "Double"   $ atDouble   s_readExpCurrent
         , benches "Rational" $ atRational s_readExpCurrent
         ]
-    , bgroup ("bytestring-lexing-" ++ VERSION_bytestring_lexing ++ ":readExpLim@inherent") $ concat
-        [ benches "Float"    $ float_s_readExpLimCurrent
-        , benches "Double"   $ double_s_readExpLimCurrent
-        ]
     , bgroup ("bytestring-lexing-" ++ VERSION_bytestring_lexing ++ ":readExpLim@infinity") $ concat
         [ benches "Float"    $ atFloat    s_readExpLimInftyCurrent
         , benches "Double"   $ atDouble   s_readExpLimInftyCurrent
         , benches "Rational" $ atRational s_readExpLimInftyCurrent
         ]
+    , bgroup ("bytestring-lexing-" ++ VERSION_bytestring_lexing ++ ":readExpLim@inherent") $ concat
+        [ benches "Float"    $ float_s_readExpLimCurrent
+        , benches "Double"   $ double_s_readExpLimCurrent
+        ]
+    --
     {-
     , bgroup "readExponential1" $ concat
         [ benches "Float"    $ atFloat    s_readExpTest1

@@ -1,5 +1,6 @@
-0.5.0 (2015-XX-XX):
+0.5.0 (2015-05-05):
     - Corrected the License field in the .cabal file to say BSD2 (instead of BSD3)
+    - Data.ByteString.Lex.{Double,.Lazy.Double}: removed
     - Data.ByteString.Lex.Fractional: added based on the inefficiency of the old Alex-based parsers, as demonstrated by Hirotomo Moriwaki's bytestring-read (v0.3.0).
 
 0.4.3.3 (2015-05-30):
