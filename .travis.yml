@@ -10,6 +10,7 @@
 # However, note that these are only for Ubuntu Linux 12.04 LTS
 # 64-bit. Will have to come up with something fancy in order to
 # also use the native versions for testing Windows and OSX.
+language: haskell
 env:
  - CABALVER=1.16 GHCVER=6.12.3
  - CABALVER=1.16 GHCVER=7.0.1
