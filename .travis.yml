@@ -84,7 +84,10 @@ script:
   - $CABAL build
   # TODO: add the test suite
   #- $CABAL test --show-details=always
-  - $CABAL check
+  # We ignore the return result of check, because it will warn about
+  # us demanding -O2 and there's no way to tell it that yes we
+  # really do want that.
+  - $CABAL check || true
   # tests that a source-distribution can be generated
   - $CABAL sdist
   # check that the generated source-distribution can be built & installed
