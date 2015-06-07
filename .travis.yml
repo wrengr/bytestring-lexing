@@ -56,23 +56,23 @@ before_install:
   # Uncomment whenever hackage is down.
   #- mkdir -p ~/.cabal && cp travis/config ~/.cabal/config && $CABAL update
   #
-  # BUG: cabal-1.16 doesn't seem to like the `update` line. We get
-  # this obscure error: ""cabal-1.16: Command.optionToFieldDescr:
-  # feature not implemented"" I think maybe that's because cabal-install
-  # didn't work then? Or, it's because the cabal config has a line
-  # specifying "jobs: 2" which causes the glitch...
-  # cf., <https://ghc.haskell.org/trac/ghc/ticket/7324> among others
+  # BUG: the standard configuration for cabal-1.16 is horribly
+  # broken. It gives the obscure error ""cabal-1.16:
+  # Command.optionToFieldDescr: feature not implemented"" because
+  # it cannot parse the "jobs: $ncpus" line that's there by default.
+  # cf., <https://ghc.haskell.org/trac/ghc/ticket/7324>
+  # This grep line will indicate whether it will be a problem for
+  # us, but we need to come up with something to eliminate the
+  # offending line, otherwise all calls to $CABAL will fail
   - grep jobs ~/.cabal/config || true
-  # We don't actually have dependencies other than the boot libraries, so we'll comment it out for now...
-  #- $CABAL update
+  - $CABAL update
 
 install:
  - $CABAL --version
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
- # We don't actually have dependencies other than the boot libraries, so we'll comment these two lines out for now...
- #- travis_retry $CABAL update
+ - travis_retry $CABAL update
  # TODO: make the --enable-tests --enable-benchmarks flags work
- #- $CABAL install --only-dependencies
+ - $CABAL install --only-dependencies
  # TODO: make the --enable-tests --enable-benchmarks flags work
  - $CABAL configure -v2
 

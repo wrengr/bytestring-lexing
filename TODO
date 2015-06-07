@@ -15,4 +15,5 @@ Data.ByteString.Lex.Lazy.*:
 .travis.yml:
     * get this to actually work...
 
-
+Use Circle CI instead of Travis. Apparently they have better Haskell support
+    * https://circleci.com/gh/wrengr/bytestring-lexing/1
