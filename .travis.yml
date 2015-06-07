@@ -68,9 +68,9 @@ before_install:
     fi
   # An attempt to fix the issues with cabal-1.16
   - |
-    if [ $CABALVER == 1.18 ]; then
-      cd ~/.cabal/ && mv config{,.bak} && grep -v '^[[:space:]]*jobs:' config.bak > config && cd -
-    else
+    if [ "$CABALVER" = '1.18' -a -e '~/.cabal/config' ]; then
+      mv ~/.cabal/config{,.bak} && grep -v '^[[:space:]]*jobs:' ~/.cabal/config.bak > ~/.cabal/config
+    fi
   # Uncomment whenever hackage is down.
   #- mkdir -p ~/.cabal && cp travis/config ~/.cabal/config && $CABAL update
   - $CABAL update
