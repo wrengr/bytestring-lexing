@@ -11,6 +11,8 @@ benchmark of parsing the Content-Length field of HTTP headers.) And
 as of version 0.5.0 it offers (to my knowledge) the best-in-show
 parser for fractional/floating numbers.
 
+Note that this GitHub repository is just a clone of [the Darcs repo](http://code.haskell.org/~wren/bytestring-lexing/). I'm testing out whether to switch things over to GitHub in order to use TravisCI, and an official ticket tracker, etc. 
+
 
 ## Install
 
@@ -44,3 +46,15 @@ the `decimalPrecision` function in `Data.ByteString.Lex.Fractional`
 requires ScopedTypeVariables for efficiency. If your compiler does
 not support ScopedTypeVariables, this should be easy enough to fix.
 Contact the maintainer if this is an issue for you.
+
+
+## Links
+
+* [Website](http://cl.indiana.edu/~wren/)
+* [Blog](http://winterkoninkje.dreamwidth.org/)
+* [Twitter](https://twitter.com/wrengr)
+* [Hackage](http://hackage.haskell.org/package/bytestring-lexing)
+* [Darcs](http://code.haskell.org/~wren/bytestring-lexing)
+* [GitHub (clone)](https://github.com/wrengr/bytestring-lexing)
+* [Haddock (Darcs version)
+    ](http://code.haskell.org/~wren/bytestring-lexing/dist/doc/html/bytestring-lexing)
