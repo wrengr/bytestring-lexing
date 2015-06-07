@@ -9,9 +9,14 @@ As of version 0.3.0, bytestring-lexing offers the best-in-show
 parsers for integral values. (According to the Warp web server's
 benchmark of parsing the Content-Length field of HTTP headers.) And
 as of version 0.5.0 it offers (to my knowledge) the best-in-show
-parser for fractional/floating numbers.
+parser for fractional/floating numbers. A record of these benchmarks
+can be found
+[here](http://code.haskell.org/~wren/bytestring-lexing/bench/html)
 
-Note that this GitHub repository is just a clone of [the Darcs repo](http://code.haskell.org/~wren/bytestring-lexing/). I'm testing out whether to switch things over to GitHub in order to use TravisCI, and an official ticket tracker, etc. 
+Note that this GitHub repository is just a clone of [the Darcs
+repo](http://code.haskell.org/~wren/bytestring-lexing/). I'm testing
+out whether to switch things over to GitHub in order to use TravisCI,
+and an official ticket tracker, etc.
 
 
 ## Install
