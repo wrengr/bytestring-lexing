@@ -54,15 +54,25 @@ before_install:
       export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
     fi
   # Uncomment whenever hackage is down.
-  # - mkdir -p ~/.cabal && cp travis/config ~/.cabal/config && $CABAL update
-  - $CABAL update
+  #- mkdir -p ~/.cabal && cp travis/config ~/.cabal/config && $CABAL update
+  #
+  # BUG: cabal-1.16 doesn't seem to like the `update` line. We get
+  # this obscure error: ""cabal-1.16: Command.optionToFieldDescr:
+  # feature not implemented"" I think maybe that's because cabal-install
+  # didn't work then? Or, it's because the cabal config has a line
+  # specifying "jobs: 2" which causes the glitch...
+  # cf., <https://ghc.haskell.org/trac/ghc/ticket/7324> among others
+  - grep jobs .cabal/config
+  # We don't actually have dependencies other than the boot libraries, so we'll comment it out for now...
+  #- $CABAL update
 
 install:
  - $CABAL --version
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
- - travis_retry $CABAL update
+ # We don't actually have dependencies other than the boot libraries, so we'll comment these two lines out for now...
+ #- travis_retry $CABAL update
  # TODO: make the --enable-tests --enable-benchmarks flags work
- - $CABAL install --only-dependencies
+ #- $CABAL install --only-dependencies
  # TODO: make the --enable-tests --enable-benchmarks flags work
  - $CABAL configure -v2
 
@@ -73,7 +83,7 @@ install:
 script:
   - $CABAL build
   # TODO: add the test suite
-  # - $CABAL test --show-details=always
+  #- $CABAL test --show-details=always
   - $CABAL check
   # tests that a source-distribution can be generated
   - $CABAL sdist
