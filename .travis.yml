@@ -70,15 +70,20 @@ before_install:
     fi
   # An attempt to fix the issues with cabal-1.16
   - |
-    if [ $CABALVER = '1.16' -a -e '~/.cabal/config' ]; then
+    if [ $CABALVER = '1.16' ]; then
       echo "Yes, $CABALVER == 1.16"
-      mv ~/.cabal/config{,.bak} && grep -v '^[[:space:]]*jobs:' ~/.cabal/config.bak > ~/.cabal/config
-      # Double-check our work
-      # BUG: seems like something else is broken too. What else to remove?
-      grep jobs ~/.cabal/config
-      # See if we can't get some more info about what bad field remains
-      $CABAL update --verbose=3
-      echo "Why is there no output?"
+      # Try an initial update, to generate the ~/.cabal/config file.
+      $CABAL update || true
+      if [ -e '~/.cabal/config' ]; then
+        mv ~/.cabal/config{,.bak} && grep -v '^[[:space:]]*jobs:' ~/.cabal/config.bak > ~/.cabal/config
+        # Double-check our work
+        grep jobs ~/.cabal/config
+        # See if we can't get some more info about what bad field remains
+        $CABAL update --verbose=3
+        echo "Why is there no output?"
+      else
+        echo "ERROR: ~/.cabal/config is still missing"
+      fi
     else
       echo "No, $CABALVER /= 1.16"
     fi
