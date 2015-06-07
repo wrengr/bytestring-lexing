@@ -1,4 +1,4 @@
-# bytestring-lexing [![Hackage version](https://img.shields.io/hackage/v/bytestring-lexing.svg?style=flat)](https://hackage.haskell.org/package/bytestring-lexing) [![TravisCI Build Status](https://img.shields.io/travis/haskell/bytestring-lexing.svg?style=flat)](https://travis-ci.org/wrengr/bytestring-lexing) [![CircleCI Build Status](https://circleci.com/gh/wrengr/bytestring-lexing.svg?style=shield&circle-token=:circle-token)](https://circleci.com/gh/wrengr/bytestring-lexing)
+# bytestring-lexing [![Hackage version](https://img.shields.io/hackage/v/bytestring-lexing.svg?style=flat)](https://hackage.haskell.org/package/bytestring-lexing) [![TravisCI Build Status](https://img.shields.io/travis/wrengr/bytestring-lexing.svg?style=flat)](https://travis-ci.org/wrengr/bytestring-lexing) [![CircleCI Build Status](https://circleci.com/gh/wrengr/bytestring-lexing.svg?style=shield&circle-token=:circle-token)](https://circleci.com/gh/wrengr/bytestring-lexing)
 
 The bytestring-lexing package offers extremely efficient `ByteString`
 parsers for some common lexemes: namely integral and fractional
