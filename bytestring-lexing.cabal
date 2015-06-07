@@ -14,7 +14,7 @@ Homepage:       http://code.haskell.org/~wren/
 Author:         wren gayle romano, Don Stewart
 Maintainer:     wren@community.haskell.org
 Copyright:      Copyright (c) 2012--2015 wren gayle romano, 2008--2011 Don Stewart
-License:        BSD2
+License:        BSD3
 License-File:   LICENSE
 
 Category:       Data
