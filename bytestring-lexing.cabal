@@ -8,7 +8,7 @@ Cabal-Version:  >= 1.6
 Build-Type:     Simple
 
 Name:           bytestring-lexing
-Version:        0.5.0.2
+Version:        0.5.0.3
 Stability:      provisional
 Homepage:       http://code.haskell.org/~wren/
 Author:         wren gayle romano, Don Stewart
@@ -21,7 +21,16 @@ Category:       Data
 Synopsis:
     Parse and produce literals efficiently from strict or lazy bytestrings.
 Description:
-    Parse and produce literals efficiently from strict or lazy bytestrings.
+    The bytestring-lexing package offers extremely efficient `ByteString`
+    parsers for some common lexemes: namely integral and fractional
+    numbers. In addition, it provides efficient serializers for (some
+    of) the formats it parses.
+    .
+    As of version 0.3.0, bytestring-lexing offers the best-in-show
+    parsers for integral values. (According to the Warp web server's
+    benchmark of parsing the Content-Length field of HTTP headers.) And
+    as of version 0.5.0 it offers (to my knowledge) the best-in-show
+    parser for fractional/floating numbers.
     .
     Some benchmarks for this package can be found at:
     <http://community.haskell.org/~wren/bytestring-lexing/bench/html>
@@ -37,6 +46,23 @@ Source-Repository head
     Location: http://community.haskell.org/~wren/bytestring-lexing
 
 ----------------------------------------------------------------
+Flag base4
+    Default:     True
+    Description: base-4.0 emits "Prelude deprecated" messages in
+                 order to get people to be explicit about which
+                 version of base they use.
+Flag splitBase
+    Default:     True
+    Description: base-3.0 (GHC 6.8) broke out the packages: array,
+                 bytestring, containers, directory, old-locale,
+                 old-time, packedstring, pretty, process, random.
+Flag bytestringInBase
+    Default:     False
+    Description: The bytestring library was included in base-2.0
+                 and base-2.1.1, but for base-1.0 and base-3.0 it
+                 was a separate package.
+
+----------------------------------------------------------------
 Library
     Ghc-Options:     -O2
     Hs-Source-Dirs:  src
@@ -44,8 +70,21 @@ Library
                      Data.ByteString.Lex.Fractional
     Other-Modules:   Data.ByteString.Lex.Internal
     
-    -- Should actually be able to work as far back as base-2.0...
-    Build-Depends: base >= 4 && < 5, bytestring
+    -- Get rid of warnings about using base < 4
+    if flag(base4)
+        Build-Depends: base >= 4 && < 5
+    else
+        Build-Depends: base < 4
+    
+    if flag(bytestringInBase)
+        Build-Depends: base >= 2.0 && < 2.2
+    else
+        Build-Depends: base < 2.0 || >= 3, bytestring
+
+    if flag(splitBase)
+        Build-Depends: base >= 3 && < 5, bytestring
+    else
+        Build-Depends: base < 3
 
 ----------------------------------------------------------------
 ----------------------------------------------------------- fin.
