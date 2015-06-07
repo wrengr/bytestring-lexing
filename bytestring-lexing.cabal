@@ -19,7 +19,7 @@ License-File:   LICENSE
 
 Category:       Data
 Synopsis:
-    Parse and produce literals efficiently from strict or lazy bytestrings.
+    Efficiently parse and produce common lexemes: namely integral and fractional numbers.
 Description:
     The bytestring-lexing package offers extremely efficient `ByteString`
     parsers for some common lexemes: namely integral and fractional
