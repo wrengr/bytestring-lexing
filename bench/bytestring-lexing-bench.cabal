@@ -18,7 +18,7 @@ Synopsis:       Microbenchmarking for common functions.
 Description:    Microbenchmarking for common functions.
 
 -- To run all the benchmarks with criterion>=0.6 do:
--- for b in isSpace numDigits packDecimal readDecimal ceilEightThirds ; do
+-- for b in isSpace numDigits packDecimal readDecimal readExponential ceilEightThirds ; do
 --     ./dist/build/bench-${b}/bench-${b} -o ${b}.html ; done && open *.html
 
 ----------------------------------------------------------------

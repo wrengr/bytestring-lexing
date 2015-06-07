@@ -1,14 +1,15 @@
 ----------------------------------------------------------------
--- wren gayle romano <wren@community.haskell.org>   ~ 2015.06.05
+-- wren gayle romano <wren@community.haskell.org>   ~ 2015.06.07
 ----------------------------------------------------------------
 
 -- By and large Cabal >=1.2 is fine; but >= 1.6 gives tested-with:
--- and source-repository:.
-Cabal-Version:  >= 1.6
+-- and source-repository:; and >=1.8 gives us executables which can
+-- build-depends: on the library itself.
+Cabal-Version:  >= 1.8
 Build-Type:     Simple
 
 Name:           bytestring-lexing
-Version:        0.5.0.3
+Version:        0.5.0.4
 Stability:      provisional
 Homepage:       http://code.haskell.org/~wren/
 Author:         wren gayle romano, Don Stewart
@@ -52,11 +53,6 @@ Flag base4
     Description: base-4.0 emits "Prelude deprecated" messages in
                  order to get people to be explicit about which
                  version of base they use.
-Flag splitBase
-    Default:     True
-    Description: base-3.0 (GHC 6.8) broke out the packages: array,
-                 bytestring, containers, directory, old-locale,
-                 old-time, packedstring, pretty, process, random.
 Flag bytestringInBase
     Default:     False
     Description: The bytestring library was included in base-2.0
@@ -71,7 +67,6 @@ Library
                      Data.ByteString.Lex.Fractional
     Other-Modules:   Data.ByteString.Lex.Internal
     
-    -- Get rid of warnings about using base < 4
     if flag(base4)
         Build-Depends: base >= 4 && < 5
     else
@@ -82,10 +77,31 @@ Library
     else
         Build-Depends: base < 2.0 || >= 3, bytestring
 
-    if flag(splitBase)
-        Build-Depends: base >= 3 && < 5, bytestring
-    else
-        Build-Depends: base < 3
+----------------------------------------------------------------
+-- BUG: How does the Test-Suite stanza work? I can't seem to get it to copy things over into ./dist...
+-- BUG: rephrasing it as Executable doesn't work either!!
+-- Executable test-all
+--     Hs-Source-Dirs: test
+--     Main-Is:        test/Main.hs
+--     Other-Modules:  Integral, Fractional
+--     Build-Depends:  bytestring-lexing >= 0.5.0
+--                  ,  QuickCheck        >= 2.4.1
+--                  ,  lazysmallcheck    >= 0.6
+-- 
+--     if flag(base4)
+--         Build-Depends: base >= 4 && < 5
+--     else
+--         Build-Depends: base < 4
+--     
+--     if flag(bytestringInBase)
+--         Build-Depends: base >= 2.0 && < 2.2
+--     else
+--         Build-Depends: base < 2.0 || >= 3, bytestring
+
+-- cabal configure flags:
+-- * --enable-tests
+-- * --enable-coverage (replaces the deprecated --enable-library-coverage)
+-- * --enable-benchmarks (doesn't seem to actually work... At least, I was getting errors whenever I tried passing this; maybe upping the cabal-version to 1.8 fixed that?)
 
 ----------------------------------------------------------------
 ----------------------------------------------------------- fin.
