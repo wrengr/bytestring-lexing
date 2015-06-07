@@ -54,7 +54,7 @@ before_install:
   # If $GHCVER is the one travis has, don't bother reinstalling it.
   # We can also have faster builds by installing some libraries with
   # `apt`. If it isn't, install the GHC we want from hvr's PPA along
-  # with cabal-1.18. This trick was taken from lens:
+  # with cabal-1.18. This trick was taken from lens
   # cf., <https://github.com/ekmett/lens/blob/master/.travis.yml>
   - |
     if [ $GHCVER = `ghc --numeric-version` ]; then
@@ -69,12 +69,13 @@ before_install:
       export CABAL=cabal-$CABALVER
       export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
     fi
+  
   # The standard configuration for cabal-1.16 gives a horribly
   # obscure error message because it cannot parse the "jobs: $ncpus"
   # line that's there by default. So we're fixing that.
   # cf., <https://ghc.haskell.org/trac/ghc/ticket/7324>
   - |
-      if [ -e ~/.cabal/config ]; then
+    if [ -e ~/.cabal/config ]; then
         echo 'Fixing the ~/.cabal/config for Cabal-1.16'
         mv ~/.cabal/config{,.bak} && grep -v '^[[:space:]]*jobs:' ~/.cabal/config.bak > ~/.cabal/config
         # TODO: Try to remove these other warnings?
@@ -83,6 +84,7 @@ before_install:
         # /home/travis/.cabal/config: Unrecognized field extra-prog-path on line 37
       fi
     fi
+  
   # Uncomment this line whenever hackage is down.
   #- mkdir -p ~/.cabal && cp travis/config ~/.cabal/config && $CABAL update
   - $CABAL update
