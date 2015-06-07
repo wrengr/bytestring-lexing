@@ -84,11 +84,9 @@ install:
   - $CABAL --version
   - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
   - travis_retry $CABAL update
-  # HACK: to figure out what versions are available
-  - $CABAL install --dry-run QuickCheck smallcheck
-  # TODO: make the --enable-tests --enable-benchmarks flags work
-  - $CABAL install --only-dependencies
-  # TODO: make the --enable-benchmarks flags work
+  # TODO: make the --enable-benchmarks flag work
+  - $CABAL install --only-dependencies --enable-tests
+  # TODO: make the --enable-benchmarks flag work
   - $CABAL configure -v2 --enable-tests
 
 
