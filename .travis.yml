@@ -25,17 +25,17 @@ env:
   # cf., <https://ghc.haskell.org/trac/ghc/ticket/7324>
   # Until we can come up with a nice easy script to remove the
   # offending line, I'm commenting out these old versions
-  #- CABALVER=1.16 GHCVER=6.12.3
-  #- CABALVER=1.16 GHCVER=7.0.1
-  #- CABALVER=1.16 GHCVER=7.0.2
-  #- CABALVER=1.16 GHCVER=7.0.3
-  #- CABALVER=1.16 GHCVER=7.0.4
-  #- CABALVER=1.16 GHCVER=7.2.1
-  #- CABALVER=1.16 GHCVER=7.2.2
-  #- CABALVER=1.16 GHCVER=7.4.1
-  #- CABALVER=1.16 GHCVER=7.4.2
-  #- CABALVER=1.16 GHCVER=7.6.1
-  #- CABALVER=1.16 GHCVER=7.6.2
+  - CABALVER=1.16 GHCVER=6.12.3
+  - CABALVER=1.16 GHCVER=7.0.1
+  - CABALVER=1.16 GHCVER=7.0.2
+  - CABALVER=1.16 GHCVER=7.0.3
+  - CABALVER=1.16 GHCVER=7.0.4
+  - CABALVER=1.16 GHCVER=7.2.1
+  - CABALVER=1.16 GHCVER=7.2.2
+  - CABALVER=1.16 GHCVER=7.4.1
+  - CABALVER=1.16 GHCVER=7.4.2
+  - CABALVER=1.16 GHCVER=7.6.1
+  - CABALVER=1.16 GHCVER=7.6.2
   - CABALVER=1.18 GHCVER=7.6.3
   - CABALVER=1.18 GHCVER=7.8.1
   - CABALVER=1.18 GHCVER=7.8.2
@@ -66,6 +66,11 @@ before_install:
       export CABAL=cabal-$CABALVER
       export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
     fi
+  # An attempt to fix the issues with cabal-1.16
+  - |
+    if [ $CABALVER == 1.18 ]; then
+      cd ~/.cabal/ && mv config{,.bak} && grep -v '^[[:space:]]*jobs:' config.bak > config && cd -
+    else
   # Uncomment whenever hackage is down.
   #- mkdir -p ~/.cabal && cp travis/config ~/.cabal/config && $CABAL update
   - $CABAL update
