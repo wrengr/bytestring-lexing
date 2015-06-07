@@ -40,8 +40,8 @@ be able to use one of the following standard methods to install it.
     $> runhaskell Setup.hs copy
     $> runhaskell Setup.hs register
 
-The test step is optional and currently does nothing. The Haddock
-step is also optional.
+The test and Haddock steps are optional. If you are not going to
+run the tests, then you needn't pass the --enable-tests flag.
 
 
 ## Portability

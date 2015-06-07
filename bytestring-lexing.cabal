@@ -37,17 +37,21 @@ Description:
     Some benchmarks for this package can be found at:
     <http://code.haskell.org/~wren/bytestring-lexing/bench/html>
 
-
--- Formerly tested with GHCs 6.8.2, 6.10.1, 6.12.1; but those are no longer verified.
--- Still trying to test with GHCs 6.12.3, 7.0.1, 7.0.2, 7.0.3, 7.0.4, 7.2.1, 7.2.2, 7.4.1, 7.4.2, 7.6.1, 7.6.2; but running into issues with cabal-1.16
-Tested-With:
-    GHC ==7.6.3, GHC ==7.8.1, GHC ==7.8.2, GHC ==7.8.3, GHC ==7.8.4, GHC ==7.10.1
 Extra-source-files:
     AUTHORS, README.md, CHANGELOG
+
+-- Cf., <https://travis-ci.org/wrengr/bytestring-lexing>
+Tested-With:
+    GHC ==7.4.1, GHC ==7.4.2,
+    GHC ==7.6.1, GHC ==7.6.2, GHC ==7.6.3,
+    GHC ==7.8.1, GHC ==7.8.2, GHC ==7.8.3, GHC ==7.8.4,
+    GHC ==7.10.1, GHC ==7.10.2
+
+----------------------------------------------------------------
 Source-Repository head
     Type:     darcs
     Location: http://code.haskell.org/~wren/bytestring-lexing
-
+    
 ----------------------------------------------------------------
 Flag base4
     Default:     True
