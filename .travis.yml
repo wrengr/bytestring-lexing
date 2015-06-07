@@ -106,6 +106,7 @@ script:
   - $CABAL build
   - $CABAL test --show-details=always
   # Not passing --hyperlink-source, unless we want to install hscolour>=1.8
+  # TODO: how to get this to throw an error if we don't have 100% coverage?
   - $CABAL haddock
   # We ignore the return result of check, because it will warn about
   # us demanding -O2 and there's no way to tell it that yes we
