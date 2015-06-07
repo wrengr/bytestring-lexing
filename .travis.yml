@@ -80,7 +80,10 @@ before_install:
         echo 'Fixing the ~/.cabal/config for Cabal-1.16'
         mv ~/.cabal/config{,.bak} && grep -v '^[[:space:]]*jobs:' ~/.cabal/config.bak > ~/.cabal/config
         # Double-check our work
-        if [ 0 -eq `grep -c jobs ~/.cabal/config` ];
+        if [ ! 0 -eq `grep -c jobs ~/.cabal/config` ]; then
+          echo "ERROR: couldn't fix ~/.cabal/config"
+          exit 1
+        fi
         # See if we can't get some more info about what bad field remains
         $CABAL update --verbose=3
         echo "Why is there no output?"
