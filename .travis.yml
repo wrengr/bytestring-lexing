@@ -62,7 +62,7 @@ before_install:
   # didn't work then? Or, it's because the cabal config has a line
   # specifying "jobs: 2" which causes the glitch...
   # cf., <https://ghc.haskell.org/trac/ghc/ticket/7324> among others
-  - grep jobs .cabal/config
+  - grep jobs ~/.cabal/config || true
   # We don't actually have dependencies other than the boot libraries, so we'll comment it out for now...
   #- $CABAL update
 
