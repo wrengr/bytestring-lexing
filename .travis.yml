@@ -82,7 +82,6 @@ before_install:
         # Warning: /home/travis/.cabal/config: Unrecognized stanza on line 117
         # /home/travis/.cabal/config: Unrecognized stanza on line 89
         # /home/travis/.cabal/config: Unrecognized field extra-prog-path on line 37
-      fi
     fi
   
   # Uncomment this line whenever hackage is down.
@@ -114,13 +113,14 @@ script:
   # tests that a source-distribution can be generated
   - $CABAL sdist
   # check that the generated source-distribution can be built & installed
-  - export SRC_TGZ=$(cabal info . | awk '{print $2 ".tar.gz";exit}') ;
-    cd dist/;
+  - |
+    export SRC_TGZ=$(cabal info . | awk '{print $2 ".tar.gz";exit}')
+    cd dist/
     if [ -f "$SRC_TGZ" ]; then
-       cabal install --force-reinstalls "$SRC_TGZ";
+       cabal install --force-reinstalls "$SRC_TGZ"
     else
-       echo "expected '$SRC_TGZ' not found";
-       exit 1;
+       echo "expected '$SRC_TGZ' not found"
+       exit 1
     fi
 
 # TODO: additional checks:
