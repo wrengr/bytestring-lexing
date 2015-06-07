@@ -71,21 +71,22 @@ before_install:
   # An attempt to fix the issues with cabal-1.16
   - |
     if [ $CABALVER = '1.16' ]; then
-      echo "Yes, $CABALVER == 1.16"
       # Try an initial update, to generate the ~/.cabal/config file.
-      $CABAL update || true
-      if [ -e '~/.cabal/config' ]; then
+      if [ ! -e ~/.cabal/config ]; then
+        echo 'Generating a new ~/.cabal/config'
+        $CABAL update >/dev/null 2>&1 || true
+      fi
+      if [ -e ~/.cabal/config ]; then
+        echo 'Fixing the ~/.cabal/config for Cabal-1.16'
         mv ~/.cabal/config{,.bak} && grep -v '^[[:space:]]*jobs:' ~/.cabal/config.bak > ~/.cabal/config
         # Double-check our work
-        grep jobs ~/.cabal/config
+        if [ 0 -eq `grep -c jobs ~/.cabal/config` ];
         # See if we can't get some more info about what bad field remains
         $CABAL update --verbose=3
         echo "Why is there no output?"
       else
         echo "ERROR: ~/.cabal/config is still missing"
       fi
-    else
-      echo "No, $CABALVER /= 1.16"
     fi
   # Uncomment whenever hackage is down.
   #- mkdir -p ~/.cabal && cp travis/config ~/.cabal/config && $CABAL update
