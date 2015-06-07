@@ -2,14 +2,17 @@ Data.ByteString.Lex.Integral:
     * See how many of the new specializations ({Int,Word}{8,16,32,64}) are actually useful in practice.
     * relax the Integral constraint to Num wherever possible?
 
-./test/bench/html/:
-    * Update the css to match the changes elsewhere
+./test/:
+	* set up testing in Cabal; necessary for TravisCI to do anything interesting
 
-README:
-    * is woefully out of date. fix it
+./bench/html/:
+    * Update the css to match the changes elsewhere
+	* set up benchmarking in Cabal
 
 Data.ByteString.Lex.Lazy.*:
     * reintroduce modules for working with lazy bytestrings
 
 .travis.yml:
-    * actually use this!
+    * get this to actually work...
+
+
