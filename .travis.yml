@@ -70,11 +70,13 @@ before_install:
     fi
   # An attempt to fix the issues with cabal-1.16
   - |
-    if [ $CABALVER = '1.18' -a -e '~/.cabal/config' ]; then
+    if [ $CABALVER = '1.16' -a -e '~/.cabal/config' ]; then
       mv ~/.cabal/config{,.bak} && grep -v '^[[:space:]]*jobs:' ~/.cabal/config.bak > ~/.cabal/config
       # Double-check our work
       # BUG: seems like something else is broken too. What else to remove?
-      grep '^[[:space:]]*jobs:' ~/.cabal/config
+      grep jobs ~/.cabal/config
+      # See if we can't get some more info about what bad field remains
+      $CABAL update --verbose=3
     fi
   # Uncomment whenever hackage is down.
   #- mkdir -p ~/.cabal && cp travis/config ~/.cabal/config && $CABAL update
