@@ -105,7 +105,8 @@ install:
 script:
   - $CABAL build
   - $CABAL test --show-details=always
-  - $CABAL haddock --hyperlink-source
+  # Not passing --hyperlink-source, unless we want to install hscolour>=1.8
+  - $CABAL haddock
   # We ignore the return result of check, because it will warn about
   # us demanding -O2 and there's no way to tell it that yes we
   # really do want that.
