@@ -14,7 +14,6 @@
 ----------------------------------------------------------------
 module Fractional (main) where
 
-import           Data.Proxy                   (Proxy(Proxy), asProxyTypeOf)
 import           Data.ByteString              (ByteString)
 import qualified Data.ByteString              as BS
 import qualified Data.ByteString.Char8        as BS8
@@ -24,6 +23,14 @@ import qualified Test.QuickCheck              as QC
 --import qualified Test.SmallCheck              as SC
 
 ----------------------------------------------------------------
+----------------------------------------------------------------
+-- We reimplement Data.Proxy to avoid build errors on older systems
+
+data Proxy a = Proxy 
+
+asProxyTypeOf :: a -> Proxy a -> a
+asProxyTypeOf a _ = a
+
 ----------------------------------------------------------------
 -- | Fuzzy equality checking for floating-point numbers.
 (=~=) :: (Fractional a, Ord a) => a -> a -> Bool
