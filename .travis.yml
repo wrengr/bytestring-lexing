@@ -10,26 +10,32 @@
 # However, note that these are only for Ubuntu Linux 12.04 LTS
 # 64-bit. Will have to come up with something fancy in order to
 # also use the native versions for testing Windows and OSX.
-language: haskell
 env:
- - CABALVER=1.16 GHCVER=6.12.3
- - CABALVER=1.16 GHCVER=7.0.1
- - CABALVER=1.16 GHCVER=7.0.2
- - CABALVER=1.16 GHCVER=7.0.3
- - CABALVER=1.16 GHCVER=7.0.4
- - CABALVER=1.16 GHCVER=7.2.1
- - CABALVER=1.16 GHCVER=7.2.2
- - CABALVER=1.16 GHCVER=7.4.1
- - CABALVER=1.16 GHCVER=7.4.2
- - CABALVER=1.16 GHCVER=7.6.1
- - CABALVER=1.16 GHCVER=7.6.2
- - CABALVER=1.18 GHCVER=7.6.3
- - CABALVER=1.18 GHCVER=7.8.1
- - CABALVER=1.18 GHCVER=7.8.2
- - CABALVER=1.18 GHCVER=7.8.3
- - CABALVER=1.18 GHCVER=7.8.4
- - CABALVER=1.22 GHCVER=7.10.1
- - CABALVER=1.22 GHCVER=7.10.2 # (pre-release snapshot)
+  # BUG: the standard configuration for cabal-1.16 is horribly
+  # broken. It gives the obscure error ""cabal-1.16:
+  # Command.optionToFieldDescr: feature not implemented"" because
+  # it cannot parse the "jobs: $ncpus" line that's there by default.
+  # cf., <https://ghc.haskell.org/trac/ghc/ticket/7324>
+  # Until we can come up with a nice easy script to remove the
+  # offending line, I'm commenting out these old versions
+  #- CABALVER=1.16 GHCVER=6.12.3
+  #- CABALVER=1.16 GHCVER=7.0.1
+  #- CABALVER=1.16 GHCVER=7.0.2
+  #- CABALVER=1.16 GHCVER=7.0.3
+  #- CABALVER=1.16 GHCVER=7.0.4
+  #- CABALVER=1.16 GHCVER=7.2.1
+  #- CABALVER=1.16 GHCVER=7.2.2
+  #- CABALVER=1.16 GHCVER=7.4.1
+  #- CABALVER=1.16 GHCVER=7.4.2
+  #- CABALVER=1.16 GHCVER=7.6.1
+  #- CABALVER=1.16 GHCVER=7.6.2
+  - CABALVER=1.18 GHCVER=7.6.3
+  - CABALVER=1.18 GHCVER=7.8.1
+  - CABALVER=1.18 GHCVER=7.8.2
+  - CABALVER=1.18 GHCVER=7.8.3
+  - CABALVER=1.18 GHCVER=7.8.4
+  - CABALVER=1.22 GHCVER=7.10.1
+  - CABALVER=1.22 GHCVER=7.10.2 # (pre-release snapshot)
 
 
 # Rather than using the version suggested by hvr/multi-ghc-travis,
@@ -55,16 +61,6 @@ before_install:
     fi
   # Uncomment whenever hackage is down.
   #- mkdir -p ~/.cabal && cp travis/config ~/.cabal/config && $CABAL update
-  #
-  # BUG: the standard configuration for cabal-1.16 is horribly
-  # broken. It gives the obscure error ""cabal-1.16:
-  # Command.optionToFieldDescr: feature not implemented"" because
-  # it cannot parse the "jobs: $ncpus" line that's there by default.
-  # cf., <https://ghc.haskell.org/trac/ghc/ticket/7324>
-  # This grep line will indicate whether it will be a problem for
-  # us, but we need to come up with something to eliminate the
-  # offending line, otherwise all calls to $CABAL will fail
-  - grep jobs ~/.cabal/config || true
   - $CABAL update
 
 install:
