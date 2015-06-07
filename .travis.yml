@@ -68,7 +68,7 @@ before_install:
     fi
   # An attempt to fix the issues with cabal-1.16
   - |
-    if [ "$CABALVER" = '1.18' -a -e '~/.cabal/config' ]; then
+    if [ $CABALVER = '1.18' -a -e '~/.cabal/config' ]; then
       mv ~/.cabal/config{,.bak} && grep -v '^[[:space:]]*jobs:' ~/.cabal/config.bak > ~/.cabal/config
     fi
   # Uncomment whenever hackage is down.
@@ -81,8 +81,8 @@ install:
  - travis_retry $CABAL update
  # TODO: make the --enable-tests --enable-benchmarks flags work
  - $CABAL install --only-dependencies
- # TODO: make the --enable-tests --enable-benchmarks flags work
- - $CABAL configure -v2
+ # TODO: make the --enable-benchmarks flags work
+ - $CABAL configure -v2 --enable-tests
 
 
 # Here starts the actual work to be performed for the package under
@@ -90,8 +90,7 @@ install:
 # the build to fail.
 script:
   - $CABAL build
-  # TODO: add the test suite
-  #- $CABAL test --show-details=always
+  - $CABAL test --show-details=always
   # We ignore the return result of check, because it will warn about
   # us demanding -O2 and there's no way to tell it that yes we
   # really do want that.
