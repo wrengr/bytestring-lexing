@@ -3,8 +3,8 @@
 ----------------------------------------------------------------
 
 -- By and large Cabal >=1.2 is fine; but
--- * >= 1.6 gives tested-with: and source-repository:
--- * >=1.8 allows executables which can build-depends: on the library
+-- * >=1.6 gives tested-with: and source-repository:
+-- * >=1.8 allows executables to build-depends: on the library
 -- * >=1.9.2 allows Test-Suite
 Cabal-Version:  >= 1.9.2
 Build-Type:     Simple
@@ -18,9 +18,8 @@ Maintainer:     wren@community.haskell.org
 Copyright:      Copyright (c) 2012--2015 wren gayle romano, 2008--2011 Don Stewart
 License:        BSD3
 License-File:   LICENSE
-Extra-source-files: AUTHORS, README.md, CHANGELOG
 
-Category: Data
+Category:       Data
 Synopsis:
     Efficiently parse and produce common integral and fractional numbers.
 Description:
@@ -37,6 +36,9 @@ Description:
     .
     Some benchmarks for this package can be found at:
     <http://code.haskell.org/~wren/bytestring-lexing/bench/html>
+
+Extra-source-files:
+    AUTHORS, README.md, CHANGELOG
 
 -- Cf., <https://travis-ci.org/wrengr/bytestring-lexing>
 Tested-With:
