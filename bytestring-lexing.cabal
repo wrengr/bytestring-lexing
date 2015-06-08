@@ -51,18 +51,6 @@ Tested-With:
 Source-Repository head
     Type:     darcs
     Location: http://code.haskell.org/~wren/bytestring-lexing
-    
-----------------------------------------------------------------
-Flag base4
-    Default:     True
-    Description: base-4.0 emits "Prelude deprecated" messages in
-                 order to get people to be explicit about which
-                 version of base they use.
-Flag bytestringInBase
-    Default:     False
-    Description: The bytestring library was included in base-2.0
-                 and base-2.1.1, but for base-1.0 and base-3.0 it
-                 was a separate package.
 
 ----------------------------------------------------------------
 Library
@@ -71,16 +59,9 @@ Library
     Exposed-Modules: Data.ByteString.Lex.Integral
                      Data.ByteString.Lex.Fractional
     Other-Modules:   Data.ByteString.Lex.Internal
-    
-    if flag(base4)
-        Build-Depends: base >= 4 && < 5
-    else
-        Build-Depends: base < 4
-    
-    if flag(bytestringInBase)
-        Build-Depends: base >= 2.0 && < 2.2
-    else
-        Build-Depends: base < 2.0 || >= 3, bytestring
+    -- We can probably push this back further, but that's the oldest
+    -- version of base we can test on TravisCI. (== GHC 7.4.1)
+    Build-Depends: base >= 4.5 && < 5, bytestring
 
 ----------------------------------------------------------------
 -- <https://www.haskell.org/cabal/users-guide/developing-packages.html#test-suites>
