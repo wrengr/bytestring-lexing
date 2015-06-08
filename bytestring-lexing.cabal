@@ -18,8 +18,9 @@ Maintainer:     wren@community.haskell.org
 Copyright:      Copyright (c) 2012--2015 wren gayle romano, 2008--2011 Don Stewart
 License:        BSD3
 License-File:   LICENSE
+Extra-source-files: AUTHORS, README.md, CHANGELOG
 
-Category:       Data
+Category: Data
 Synopsis:
     Efficiently parse and produce common integral and fractional numbers.
 Description:
@@ -36,9 +37,6 @@ Description:
     .
     Some benchmarks for this package can be found at:
     <http://code.haskell.org/~wren/bytestring-lexing/bench/html>
-
-Extra-source-files:
-    AUTHORS, README.md, CHANGELOG
 
 -- Cf., <https://travis-ci.org/wrengr/bytestring-lexing>
 Tested-With:
@@ -59,9 +57,10 @@ Library
     Exposed-Modules: Data.ByteString.Lex.Integral
                      Data.ByteString.Lex.Fractional
     Other-Modules:   Data.ByteString.Lex.Internal
-    -- We can probably push this back further, but that's the oldest
-    -- version of base we can test on TravisCI. (== GHC 7.4.1)
-    Build-Depends: base >= 4.5 && < 5, bytestring
+    -- We can probably push this back further, but these're the
+    -- oldest versions we can test on TravisCI. (== GHC 7.4.1)
+    Build-Depends:  base              >= 4.5 && < 5
+                 ,  bytestring        >= 0.9.2.1 && < 0.11
 
 ----------------------------------------------------------------
 -- <https://www.haskell.org/cabal/users-guide/developing-packages.html#test-suites>
@@ -80,20 +79,12 @@ Test-Suite test-all
     Main-Is:        Main.hs
     Other-Modules:  Integral
                  ,  Fractional
-    Build-Depends:  bytestring-lexing >= 0.5.0.5
+    Build-Depends:  base              >= 4.5 && < 5
+                 ,  bytestring        >= 0.9.2.1 && < 0.11
+                 ,  bytestring-lexing >= 0.5.0.5
                  ,  QuickCheck        >= 2.4.1
                  ,  smallcheck        >= 1.1.1
                  -- lazysmallcheck    >= 0.6
-
-    if flag(base4)
-        Build-Depends: base >= 4 && < 5
-    else
-        Build-Depends: base < 4
-    
-    if flag(bytestringInBase)
-        Build-Depends: base >= 2.0 && < 2.2
-    else
-        Build-Depends: base < 2.0 || >= 3, bytestring
 
 -- cabal configure flags:
 -- * --enable-tests
