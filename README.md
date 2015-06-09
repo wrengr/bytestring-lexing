@@ -70,7 +70,9 @@ If you want to run the benchmarking code, then do:
     $> cd bytestring-lexing/bench
     $> cabal configure
     $> cabal build
-    $> for b in isSpace numDigits packDecimal readDecimal readExponential ceilEightThirds ; do ./dist/build/bench-${b}/bench-${b} -o ${b}.html ; done && open *.html
+    $> for b in isSpace numDigits packDecimal readDecimal readExponential ceilEightThirds; do
+           ./dist/build/bench-${b}/bench-${b} -o ${b}.html;
+       done && open *.html
 
 Of course, you needn't run all the benchmarking programs if you
 don't want. Notably, these benchmarks are artefacts of the development
@@ -82,10 +84,38 @@ we've compared against in the past.
 ## Portability
 
 An attempt has been made to keep this library portable. However,
-the `decimalPrecision` function in `Data.ByteString.Lex.Fractional`
-requires ScopedTypeVariables for efficiency. If your compiler does
-not support ScopedTypeVariables, this should be easy enough to fix.
-Contact the maintainer if this is an issue for you.
+we do make use of two simple language extensions. Both of these
+would be easy enough to remove, but they should not pose a significant
+portability burden. If they do in fact pose a burden for your
+compiler, contact the maintainer.
+
+* ScopedTypeVariables - the `decimalPrecision` function in
+    `Data.ByteString.Lex.Fractional` uses ScopedTypeVariables for
+    efficiency; namely to ensure that the constant function
+    `decimalPrecision` need only compute its result once (per type),
+    and that its result has no data dependency on the proxy argument.
+* BangPatterns - are used to make the code prettier and to "improve"
+    code coverage over the equivalent semantics via the following
+    idiom:
+    ```
+    foo x ... z
+        | x `seq` ... `seq` z `seq` False = error "impossible"
+        | otherwise = ...
+    ```
+    BangPatterns are supported in GHC as far back as [version
+    6.6.1][ghc-bangpatterns], and are also supported by
+    [JHC][jhc-bangpatterns] and [UHC][uhc-bangpatterns]. As of 2010,
+    they were [not supported by Hugs][hugs-bangpatterns]; but alas
+    Hugs is pretty much dead now.
+
+[ghc-bangpatterns]: 
+    https://downloads.haskell.org/~ghc/6.6.1/docs/html/users_guide/sec-bang-patterns.html
+[jhc-bangpatterns]:
+    http://repetae.net/computer/jhc/manual.html#code-options
+[uhc-bangpatterns]:
+    https://github.com/UU-ComputerScience/uhc-js/issues/1
+[hugs-bangpatterns]: 
+    https://mail.haskell.org/pipermail/haskell-cafe/2010-July/079946.html
 
 
 ## Changes: Version 0.5.0 (2015-05-06) vs 0.4.3 (2013-03-21)
