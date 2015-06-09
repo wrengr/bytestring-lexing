@@ -10,11 +10,9 @@ numbers. In addition, it provides efficient serializers for (some
 of) the formats it parses.
 
 As of version 0.3.0, bytestring-lexing offers the best-in-show
-parsers for integral values. (According to the Warp web server's
-benchmark of parsing the Content-Length field of HTTP headers.) And
-as of version 0.5.0 it offers (to my knowledge) the best-in-show
-parser for fractional/floating numbers. A record of these benchmarks
-can be found
+parsers for integral values. And as of version 0.5.0 it offers (to
+my knowledge) the best-in-show parser for fractional/floating
+numbers. A record of these benchmarks can be found
 [here](http://code.haskell.org/~wren/bytestring-lexing/bench/html)
 
 Note that the GitHub repository is just a clone of [the Darcs
@@ -37,15 +35,48 @@ be able to use one of the following standard methods to install it.
     
     -- Without cabal-install, but with the source already:
     $> cd bytestring-lexing
-    $> runhaskell Setup.hs configure --user --enable-tests
+    $> runhaskell Setup.hs configure --user
     $> runhaskell Setup.hs build
-    $> runhaskell Setup.hs test
     $> runhaskell Setup.hs haddock --hyperlink-source
     $> runhaskell Setup.hs copy
     $> runhaskell Setup.hs register
 
-The test and Haddock steps are optional. If you are not going to
-run the tests, then you needn't pass the --enable-tests flag.
+The Haddock step is optional.
+
+
+### Testing
+
+If you want to run the test suite, use the following standard method
+(with `runhaskell Setup.hs` in lieu of `cabal`, if necessary):
+
+    $> cd bytestring-lexing
+    $> cabal configure --enable-tests  --enable-coverage
+    $> cabal build
+    $> cabal test --keep-tix-files
+
+The results of the code coverage are in
+`./dist/hpc/vanilla/html/bytestring-lexing-$VERSION/hpc_index.html`.
+If you're not interested in the coverage of the test suite, then
+you needn't pass the `--enable-coverage` nor `--keep-tix-files`
+flags. Note that older versions of cabal used the flag name
+`--enable-library-coverage` instead of `--enable-coverage`. And
+IIRC hpc integration in cabal was broken for ghc-7.6.
+
+
+### Benchmarks
+
+If you want to run the benchmarking code, then do:
+
+    $> cd bytestring-lexing/bench
+    $> cabal configure
+    $> cabal build
+    $> for b in isSpace numDigits packDecimal readDecimal readExponential ceilEightThirds ; do ./dist/build/bench-${b}/bench-${b} -o ${b}.html ; done && open *.html
+
+Of course, you needn't run all the benchmarking programs if you
+don't want. Notably, these benchmarks are artefacts of the development
+of the library. They are not necessarily the most up-to-date
+reflection of the library itself, nor of other Haskell libraries
+we've compared against in the past.
 
 
 ## Portability
