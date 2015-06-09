@@ -4,7 +4,6 @@ Data.ByteString.Lex.Integral:
 
 ./test/:
 	* get the test suite to return error codes as appropriate; otherwise TravisCI will always say it works!
-	* Use hpc-coveralls: <http://guillaume-nargeot.github.io/haskell/2014/04/01/haskell-code-coverage-coveralls-support/>
 
 ./bench/html/:
     * Update the css to match the changes elsewhere
@@ -15,3 +14,7 @@ Data.ByteString.Lex.Lazy.*:
 
 README.md:
     * Add coveralls badge? Other stuff from <https://raw.githubusercontent.com/mtchavez/circleci/master/README.md>
+
+.travis.yml:
+	* Use hpc-coveralls: <http://guillaume-nargeot.github.io/haskell/2014/04/01/haskell-code-coverage-coveralls-support/>
+	* Use hlint: <https://github.com/guillaume-nargeot/project-euler-haskell/blob/master/.travis.yml>
