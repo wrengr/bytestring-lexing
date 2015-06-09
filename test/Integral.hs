@@ -108,8 +108,7 @@ packDecimal = start
         | n0 < 0    = Nothing
         | otherwise = Just $ loop n0 BS.empty
 
-    loop n xs
-        | n `seq` xs `seq` False = undefined -- for strictness analysis
+    loop !n !xs
         | n <= 9    = BS.cons (0x30 + fromIntegral n) xs
         | otherwise =
             let (q,r) = n `quotRem` 10

@@ -1,13 +1,14 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
+{-# LANGUAGE BangPatterns #-}
 ----------------------------------------------------------------
---                                                    2013.03.21
+--                                                    2015.06.09
 -- |
 -- Module      :  Data.ByteString.Lex.Integral
 -- Copyright   :  Copyright (c) 2010--2015 wren gayle romano
 -- License     :  BSD2
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  provisional
--- Portability :  Haskell98
+-- Portability :  BangPatterns
 --
 -- Functions for parsing and producing 'Integral' values from\/to
 -- 'ByteString's based on the \"Char8\" encoding. That is, we assume
@@ -96,9 +97,8 @@ readDecimalSimple = start
                     Just $ loop (fromIntegral (w - 0x30)) (BSU.unsafeTail xs)
               | otherwise -> Nothing
 
-    loop n xs
-        | n `seq` xs `seq` False = undefined -- for strictness analysis
-        | BS.null xs = (n, BS.empty)         -- not @xs@, to help GC
+    loop !n !xs
+        | BS.null xs = (n, BS.empty) -- not @xs@, to help GC
         | otherwise  =
             case BSU.unsafeHead xs of
             w | 0x39 >= w && w >= 0x30 ->
@@ -153,8 +153,7 @@ readDecimal = start
               | otherwise   -> Nothing
 
     loop0 :: (Integral a) => a -> ByteString -> (a, ByteString)
-    loop0 m xs
-        | m `seq` xs `seq` False = undefined
+    loop0 !m !xs
         | BS.null xs = (m, BS.empty)
         | otherwise  =
             case BSU.unsafeHead xs of
@@ -163,57 +162,49 @@ readDecimal = start
 
     loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8
         :: (Integral a) => a -> Int -> ByteString -> (a, ByteString)
-    loop1 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop1 !m !n !xs
         | BS.null xs = (m*10 + fromIntegral n, BS.empty)
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop2 m (addDigit n w) (BSU.unsafeTail xs)
               | otherwise   -> (m*10 + fromIntegral n, xs)
-    loop2 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop2 !m !n !xs
         | BS.null xs = (m*100 + fromIntegral n, BS.empty)
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop3 m (addDigit n w) (BSU.unsafeTail xs)
               | otherwise   -> (m*100 + fromIntegral n, xs)
-    loop3 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop3 !m !n !xs
         | BS.null xs = (m*1000 + fromIntegral n, BS.empty)
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop4 m (addDigit n w) (BSU.unsafeTail xs)
               | otherwise   -> (m*1000 + fromIntegral n, xs)
-    loop4 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop4 !m !n !xs
         | BS.null xs = (m*10000 + fromIntegral n, BS.empty)
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop5 m (addDigit n w) (BSU.unsafeTail xs)
               | otherwise   -> (m*10000 + fromIntegral n, xs)
-    loop5 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop5 !m !n !xs
         | BS.null xs = (m*100000 + fromIntegral n, BS.empty)
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop6 m (addDigit n w) (BSU.unsafeTail xs)
               | otherwise   -> (m*100000 + fromIntegral n, xs)
-    loop6 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop6 !m !n !xs
         | BS.null xs = (m*1000000 + fromIntegral n, BS.empty)
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop7 m (addDigit n w) (BSU.unsafeTail xs)
               | otherwise   -> (m*1000000 + fromIntegral n, xs)
-    loop7 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop7 !m !n !xs
         | BS.null xs = (m*10000000 + fromIntegral n, BS.empty)
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop8 m (addDigit n w) (BSU.unsafeTail xs)
               | otherwise   -> (m*10000000 + fromIntegral n, xs)
-    loop8 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop8 !m !n !xs
         | BS.null xs = (m*100000000 + fromIntegral n, BS.empty)
         | otherwise  =
             case BSU.unsafeHead xs of
@@ -265,8 +256,7 @@ readDecimal_ = start
               | otherwise   -> 0
 
     loop0 :: (Integral a) => a -> ByteString -> a
-    loop0 m xs
-        | m `seq` xs `seq` False = undefined
+    loop0 !m !xs
         | BS.null xs = m
         | otherwise  =
             case BSU.unsafeHead xs of
@@ -275,57 +265,49 @@ readDecimal_ = start
 
     loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8
         :: (Integral a) => a -> Int -> ByteString -> a
-    loop1 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop1 !m !n !xs
         | BS.null xs = m*10 + fromIntegral n
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop2 m (addDigit n w) (BSU.unsafeTail xs)
               | otherwise   -> m*10 + fromIntegral n
-    loop2 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop2 !m !n !xs
         | BS.null xs = m*100 + fromIntegral n
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop3 m (addDigit n w) (BSU.unsafeTail xs)
               | otherwise   -> m*100 + fromIntegral n
-    loop3 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop3 !m !n !xs
         | BS.null xs = m*1000 + fromIntegral n
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop4 m (addDigit n w) (BSU.unsafeTail xs)
               | otherwise   -> m*1000 + fromIntegral n
-    loop4 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop4 !m !n !xs
         | BS.null xs = m*10000 + fromIntegral n
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop5 m (addDigit n w) (BSU.unsafeTail xs)
               | otherwise   -> m*10000 + fromIntegral n
-    loop5 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop5 !m !n !xs
         | BS.null xs = m*100000 + fromIntegral n
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop6 m (addDigit n w) (BSU.unsafeTail xs)
               | otherwise   -> m*100000 + fromIntegral n
-    loop6 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop6 !m !n !xs
         | BS.null xs = m*1000000 + fromIntegral n
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop7 m (addDigit n w) (BSU.unsafeTail xs)
               | otherwise   -> m*1000000 + fromIntegral n
-    loop7 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop7 !m !n !xs
         | BS.null xs = m*10000000 + fromIntegral n
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop8 m (addDigit n w) (BSU.unsafeTail xs)
               | otherwise   -> m*10000000 + fromIntegral n
-    loop8 m n xs
-        | m `seq` n `seq` xs `seq` False = undefined
+    loop8 !m !n !xs
         | BS.null xs = m*100000000 + fromIntegral n
         | otherwise  =
             case BSU.unsafeHead xs of
@@ -368,8 +350,7 @@ unsafePackDecimal n0 =
     where
     getDigit = BSU.unsafeIndex packDecimal_digits
 
-    loop n p
-        | n `seq` p `seq` False = undefined -- for strictness analysis
+    loop !n !p
         | n >= 100  = do
             let (q,r) = n `quotRem` 100
             write2 r p
@@ -377,12 +358,10 @@ unsafePackDecimal n0 =
         | n >= 10   = write2 n p
         | otherwise = poke p (0x30 + fromIntegral n)
     
-    write2 i0 p
-        | i0 `seq` p `seq` False = undefined -- for strictness analysis
-        | otherwise = do
-            let i = fromIntegral i0; j = i + i
-            poke p                      (getDigit $! j + 1)
-            poke (p `plusPtr` negate 1) (getDigit j)
+    write2 !i0 !p = do
+        let i = fromIntegral i0; j = i + i
+        poke p                      (getDigit $! j + 1)
+        poke (p `plusPtr` negate 1) (getDigit j)
 
 packDecimal_digits :: ByteString
 {-# NOINLINE packDecimal_digits #-}
@@ -440,9 +419,8 @@ readHexadecimal = start
                     Just $ loop (fromIntegral (w-0x61+10)) (BSU.unsafeTail xs)
               | otherwise -> Nothing
 
-    loop n xs
-        | n `seq` xs `seq` False = undefined -- for strictness analysis
-        | BS.null xs = (n, BS.empty)         -- not @xs@, to help GC
+    loop !n !xs
+        | BS.null xs = (n, BS.empty) -- not @xs@, to help GC
         | otherwise  =
             case BSU.unsafeHead xs of
             w | 0x39 >= w && w >= 0x30 ->
@@ -510,13 +488,11 @@ asHexadecimal = start
                 return () -- needed for type checking
 
     step :: Ptr Word8 -> Word8 -> IO (Ptr Word8)
-    step p w
-        | p `seq` w `seq` False = undefined -- for strictness analysis
-        | otherwise = do
-            let ix = fromIntegral w
-            poke   p     (BSU.unsafeIndex hexDigits ((ix .&. 0xF0) `shiftR` 4))
-            poke   (p `plusPtr` 1) (BSU.unsafeIndex hexDigits  (ix .&. 0x0F))
-            return (p `plusPtr` 2)
+    step !p !w = do
+        let ix = fromIntegral w
+        poke   p     (BSU.unsafeIndex hexDigits ((ix .&. 0xF0) `shiftR` 4))
+        poke   (p `plusPtr` 1) (BSU.unsafeIndex hexDigits  (ix .&. 0x0F))
+        return (p `plusPtr` 2)
 
 _asHexadecimal_overflow :: String
 {-# NOINLINE _asHexadecimal_overflow #-}
@@ -539,8 +515,7 @@ foldIO :: (a -> Word8 -> IO a) -> a -> ByteString -> IO a
 foldIO f z0 (BSI.PS fp off len) =
     FFI.withForeignPtr fp $ \p0 -> do
         let q = p0 `plusPtr` (off+len)
-        let go z p
-                | z `seq` p `seq` False = undefined -- for strictness analysis
+        let go !z !p
                 | p == q    = return z
                 | otherwise = do
                     w  <- peek p
@@ -585,9 +560,8 @@ readOctal = start
                     Just $ loop (fromIntegral (w - 0x30)) (BSU.unsafeTail xs)
               | otherwise -> Nothing
 
-    loop n xs
-        | n `seq` xs `seq` False = undefined -- for strictness analysis
-        | BS.null xs = (n, BS.empty)         -- not @xs@, to help GC
+    loop !n !xs
+        | BS.null xs = (n, BS.empty) -- not @xs@, to help GC
         | otherwise  =
             case BSU.unsafeHead xs of
             w | 0x37 >= w && w >= 0x30 ->

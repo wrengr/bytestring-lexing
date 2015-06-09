@@ -1,14 +1,14 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE BangPatterns, ScopedTypeVariables #-}
 ----------------------------------------------------------------
---                                                    2015.06.05
+--                                                    2015.06.09
 -- |
 -- Module      :  Data.ByteString.Lex.Fractional
 -- Copyright   :  Copyright (c) 2015 wren gayle romano
 -- License     :  BSD2
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  provisional
--- Portability :  Haskell98 + ScopedTypeVariables
+-- Portability :  BangPatterns + ScopedTypeVariables
 --
 -- Functions for parsing and producing 'Fractional' values from\/to
 -- 'ByteString's based on the \"Char8\" encoding. That is, we assume
@@ -58,15 +58,11 @@ import           Data.ByteString.Lex.Internal (numDecimalDigits)
 -- TODO: should we really be this strict?
 justPair :: a -> b -> Maybe (a,b)
 {-# INLINE justPair #-}
-justPair x y
-    | x `seq` y `seq` False = undefined
-    | otherwise = Just (x,y)
+justPair !x !y = Just (x,y)
 
 pair :: a -> b -> (a,b)
 {-# INLINE pair #-}
-pair x y
-    | x `seq` y `seq` False = undefined
-    | otherwise = (x,y)
+pair !x !y = (x,y)
 
 
 -- NOTE: We use 'fromInteger' everywhere instead of 'fromIntegral'
@@ -358,26 +354,21 @@ readDecimalLimited_ = start
     where
     -- All calls to 'I.readDecimal' are monomorphized at 'Integer',
     -- as specified by what 'DF' needs.
+    start !p !xs =
+        case lengthDropWhile isDecimalZero xs of
+        (0, _)  -> readWholePart p xs
+        (_, ys) ->
+            case BS.uncons ys of
+            Nothing              -> justPair (DF 0 0) BS.empty
+            Just (y0,ys0)
+                | isDecimal   y0 -> readWholePart p ys
+                | isNotPeriod y0 -> justPair (DF 0 0) ys
+                | otherwise      ->
+                    case lengthDropWhile isDecimalZero ys0 of
+                    (0,     _)   -> readFractionPart p 0 ys
+                    (scale, zs)  -> afterDroppingZeroes p scale zs
 
-    -- TODO: verify this is ~inferred~ strict in both @p@ and @xs@
-    -- without the guard trick or BangPatterns
-    start p xs
-        | p `seq` xs `seq` False = undefined
-        | otherwise =
-            case lengthDropWhile isDecimalZero xs of
-            (0, _)  -> readWholePart p xs
-            (_, ys) ->
-                case BS.uncons ys of
-                Nothing              -> justPair (DF 0 0) BS.empty
-                Just (y0,ys0)
-                    | isDecimal   y0 -> readWholePart p ys
-                    | isNotPeriod y0 -> justPair (DF 0 0) ys
-                    | otherwise      ->
-                        case lengthDropWhile isDecimalZero ys0 of
-                        (0,     _)   -> readFractionPart p 0 ys
-                        (scale, zs)  -> afterDroppingZeroes p scale zs
-
-    afterDroppingZeroes p scale xs =
+    afterDroppingZeroes !p !scale !xs =
         let ys = BS.take p xs in
         case I.readDecimal ys of
         Nothing          -> justPair (DF 0 0) xs
@@ -386,7 +377,7 @@ readDecimalLimited_ = start
             in  justPair (DF part (negate scale'))
                     (BS.dropWhile isDecimal ys')
 
-    readWholePart p xs =
+    readWholePart !p !xs =
         let ys = BS.take p xs in
         case I.readDecimal ys of
         Nothing           -> Nothing
@@ -411,7 +402,7 @@ readDecimalLimited_ = start
                 then justPair (DF whole 0) xs'
                 else readFractionPart (p-len) whole xs'
 
-    dropFractionPart xs =
+    dropFractionPart !xs =
         case BS.uncons xs of
         Nothing                    -> BS.empty -- == xs
         Just (x0,xs0)
@@ -428,7 +419,7 @@ readDecimalLimited_ = start
     -- isDecimal@ is a noop; but there's no reason to branch on
     -- testing for that. The @+1@ in @BS.drop (1+scale)@ is for the
     -- 'BSU.unsafeTail' in @ys@.
-    readFractionPart p whole xs =
+    readFractionPart !p !whole !xs =
         let ys = BS.take p (BSU.unsafeTail xs) in
         case I.readDecimal ys of
         Nothing          -> justPair (DF whole 0) xs
@@ -449,12 +440,12 @@ readExponentialLimited :: (Fractional a) => Int -> ByteString -> Maybe (a, ByteS
     Int -> ByteString -> Maybe (Rational, ByteString) #-}
 readExponentialLimited = start
     where
-    start p xs =
+    start !p !xs =
         case readDecimalLimited_ p xs of
         Nothing       -> Nothing
         Just (df,xs') -> Just $! readExponentPart df xs'
 
-    readExponentPart df xs
+    readExponentPart !df !xs
         | BS.null xs                 = pair (fromDF df) BS.empty
         | isNotE (BSU.unsafeHead xs) = pair (fromDF df) xs
         | otherwise                  =

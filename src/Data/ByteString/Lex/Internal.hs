@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
+{-# LANGUAGE BangPatterns #-}
 ----------------------------------------------------------------
 --                                                    2015.06.05
 -- |
@@ -7,7 +8,7 @@
 -- License     :  BSD2
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  provisional
--- Portability :  Haskell98
+-- Portability :  BangPatterns
 --
 -- Some functions we want to share across the other modules without actually exposing them to the user.
 ----------------------------------------------------------------
@@ -53,13 +54,13 @@ import Data.Bits (Bits(shiftR))
 
 numDigits :: Integer -> Integer -> Int
 {-# INLINE numDigits #-}
-numDigits b0 n0
+numDigits !b0 !n0
     | b0 <= 1   = error (_numDigits ++ _nonpositiveBase)
     | n0 <  0   = error (_numDigits ++ _negativeNumber)
     -- BUG: need to check n0 to be sure we won't overflow Int
     | otherwise = 1 + fst (ilog b0 n0)
     where
-    ilog b n
+    ilog !b !n
         | n < b     = (0, n)
         | r < b     = ((,) $! 2*e) r
         | otherwise = ((,) $! 2*e+1) $! (r `quot` b)
@@ -74,15 +75,14 @@ numDigits b0 n0
 -- for a more general implementation.
 numTwoPowerDigits :: (Integral a, Bits a) => Int -> a -> Int
 {-# INLINE numTwoPowerDigits #-}
-numTwoPowerDigits p n0
+numTwoPowerDigits !p !n0
     | p  <= 0   = error (_numTwoPowerDigits ++ _nonpositiveBase)
     | n0 <  0   = error (_numTwoPowerDigits ++ _negativeNumber)
     | n0 == 0   = 1
     -- BUG: need to check n0 to be sure we won't overflow Int
     | otherwise = go 0 n0
     where
-    go d n
-        | d `seq` n `seq` False = undefined
+    go !d !n
         | n > 0     = go (d+1) (n `shiftR` p)
         | otherwise = d
 
@@ -105,8 +105,7 @@ numDecimalDigits n0
     limit = fromIntegral (maxBound :: Word64)
     
     fin n bound = if n >= bound then 1 else 0
-    go k n
-        | k `seq` False = undefined -- For strictness analysis
+    go !k !n
         | n < 10        = k
         | n < 100       = k + 1
         | n < 1000      = k + 2
