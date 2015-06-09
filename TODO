@@ -4,6 +4,7 @@ Data.ByteString.Lex.Integral:
 
 ./test/:
 	* get the test suite to return error codes as appropriate; otherwise TravisCI will always say it works!
+	* Use hpc-coveralls: <http://guillaume-nargeot.github.io/haskell/2014/04/01/haskell-code-coverage-coveralls-support/>
 
 ./bench/html/:
     * Update the css to match the changes elsewhere
