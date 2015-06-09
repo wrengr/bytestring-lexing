@@ -1,7 +1,7 @@
 bytestring-lexing
 =================
 [![Hackage version](https://img.shields.io/hackage/v/bytestring-lexing.svg?style=flat)](https://hackage.haskell.org/package/bytestring-lexing) 
-[![Hackage-Deps](https://img.shields.io/hackage-deps/v/bytestring-lexing.svg?style=flat)](http://hackage.haskell.org/package/bytestring-lexing)
+[![Hackage-Deps](https://img.shields.io/hackage-deps/v/bytestring-lexing.svg?style=flat)](http://packdeps.haskellers.com/specific?package=bytestring-lexing)
 [![TravisCI Build Status](https://img.shields.io/travis/wrengr/bytestring-lexing.svg?style=flat)](https://travis-ci.org/wrengr/bytestring-lexing) 
 [![CircleCI Build Status](https://circleci.com/gh/wrengr/bytestring-lexing.svg?style=shield&circle-token=b57517657c556be6fd8fca92b843f9e4cffaf8d1)](https://circleci.com/gh/wrengr/bytestring-lexing)
 
