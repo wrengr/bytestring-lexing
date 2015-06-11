@@ -17,16 +17,18 @@ main = do
     defaultMain . flip map funs $ \(fun,f) -> bench fun $ nf (map f) [0..2^15]
     where
     funs = 
-        [ ("naive",      ceilEightThirds_naive)
-        , ("orig",       ceilEightThirds_orig)
-        , ("twan1",      ceilEightThirds_twan1)
-        , ("twan1-safe", ceilEightThirds_twan1_safe)
-        , ("twan2",      ceilEightThirds_twan2)
+        [ ("naive (<805306368)",      ceilEightThirds_naive)
+        , ("orig  (<268435456)",      ceilEightThirds_orig)
+        , ("twan1 (<268435456)",      ceilEightThirds_twan1)
+        -- This version used to be the winner back on Semiramis...
+        , ("twan1-safe",              ceilEightThirds_twan1_safe)
+        , ("twan2 (<268435457)",      ceilEightThirds_twan2)
         --
-        , ("naive-safe", makeSafe ceilEightThirds_naive)
-        , ("orig-safe",  makeSafe ceilEightThirds_orig)
-        , ("twan1-safe", makeSafe ceilEightThirds_twan1)
-        , ("twan2-safe", makeSafe ceilEightThirds_twan2)
+        -- TODO: why did this version become so fast on Ereshkigal?
+        , ("makeSafe naive", makeSafe ceilEightThirds_naive)
+        , ("makeSafe orig",  makeSafe ceilEightThirds_orig)
+        , ("makeSafe twan1", makeSafe ceilEightThirds_twan1)
+        , ("makeSafe twan2", makeSafe ceilEightThirds_twan2)
         ]
 
 ----------------------------------------------------------------

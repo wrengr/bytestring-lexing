@@ -1,13 +1,14 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
+{-# LANGUAGE CPP #-}
 ----------------------------------------------------------------
---                                                    2013.03.21
+--                                                    2015.06.10
 -- |
 -- Module      :  BenchPackDecimal
 -- Copyright   :  Copyright (c) 2011--2015 wren gayle romano
 -- License     :  BSD2
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  experimental
--- Portability :  portable
+-- Portability :  CPP
 --
 -- A benchmark for comparing different definitions of functions for
 -- rendering Integral numbers as decimal ASCII ByteStrings.
@@ -31,7 +32,7 @@ import           Data.Word                (Word8, Word64)
 import           Foreign.Ptr              (Ptr, plusPtr)
 import           Foreign.Storable         (poke)
 
-import Data.ByteString.Lex.Integral (packDecimal)
+import qualified Data.ByteString.Lex.Integral as BSLex (packDecimal)
 ----------------------------------------------------------------
 
 main :: IO ()
@@ -41,7 +42,8 @@ main = defaultMain
     , bench "packDecimal2"          $ nf (seqMap packDecimal2) [0..limit]
     , bench "packDecimal3 (v0.4.2)" $ nf (seqMap packDecimal3) [0..limit]
     --
-    , bench "packDecimal (current)" $ nf (seqMap packDecimal)  [0..limit]
+    -- BUG: why did this become so slow in v0.5? Should be identical to packDecimal3!
+    , bench ("packDecimal (v"++ VERSION_bytestring_lexing ++")") $ nf (seqMap BSLex.packDecimal)  [0..limit]
     ]
     where
     -- BUG: using an upper limit of 2^30 causes OOM failure!!
@@ -214,12 +216,13 @@ packDecimal3 n0
 
 packDecimal3_digits :: ByteString
 {-# NOINLINE packDecimal3_digits #-}
-packDecimal3_digits = BS8.pack
-    "0001020304050607080910111213141516171819\
-    \2021222324252627282930313233343536373839\
-    \4041424344454647484950515253545556575859\
-    \6061626364656667686970717273747576777879\
-    \8081828384858687888990919293949596979899"
+-- N.B., using CPP breaks string gaps!
+packDecimal3_digits = BS8.pack $
+    "0001020304050607080910111213141516171819" ++
+    "2021222324252627282930313233343536373839" ++
+    "4041424344454647484950515253545556575859" ++
+    "6061626364656667686970717273747576777879" ++
+    "8081828384858687888990919293949596979899"
 
 ----------------------------------------------------------------
 _numDigits :: String

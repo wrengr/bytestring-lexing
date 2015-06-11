@@ -328,6 +328,8 @@ packDecimal n
 
 -- This implementation is modified from:
 -- <http://www.serpentine.com/blog/2013/03/20/whats-good-for-c-is-good-for-haskell/>
+-- See the banchmarks for implementation details.
+-- BUG: the additional guard in 'numDecimalDigits' results in a 3x slowdown!!
 --
 -- | Convert a non-negative integer into an (unsigned) ASCII decimal
 -- string. This function is unsafe to use on negative inputs.
@@ -371,7 +373,7 @@ packDecimal_digits = BS8.pack
     \4041424344454647484950515253545556575859\
     \6061626364656667686970717273747576777879\
     \8081828384858687888990919293949596979899"
-    -- BUG: syntax highlighting fail: ->
+    -- BUG: jEdit syntax highlighting fail: ->
 
 ----------------------------------------------------------------
 ----------------------------------------------------------------

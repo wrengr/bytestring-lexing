@@ -1078,4 +1078,3 @@ main = do
     runQuickCheckTests
     putStrLn "Criterion tests."
     runCriterionTests "1234567898765432178979128361238162386182"
-

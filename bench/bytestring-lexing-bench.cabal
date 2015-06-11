@@ -1,5 +1,5 @@
 ----------------------------------------------------------------
--- wren gayle romano <wren@community.haskell.org>   ~ 2015.06.02
+-- wren gayle romano <wren@community.haskell.org>   ~ 2015.06.10
 ----------------------------------------------------------------
 
 Name:           bytestring-lexing-bench
@@ -98,7 +98,7 @@ Executable bench-readDecimal
 Executable bench-packDecimal
     Main-Is:        BenchPackDecimal.hs
     GHC-Options:    -main-is BenchPackDecimal.main
-    Build-Depends:  criterion >= 0.5.0
+    Build-Depends:  criterion         >= 0.5.0
                  ,  bytestring-lexing >= 0.4.2
     
     if flag(base4)

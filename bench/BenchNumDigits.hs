@@ -66,6 +66,7 @@ main = defaultMain
     , bench "numDigitsST"    $ nf (seqMap $ numDigitsST    base) [0..limit]
     , bench "numDigitsTCO"   $ nf (seqMap $ numDigitsTCO   base) [0..limit]
     , bench "numDigitsTCO'"  $ nf (seqMap $ numDigitsTCO'  base) [0..limit]
+    -- TODO: add the currently installed version
     ]
     where
     base  = 10
