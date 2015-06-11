@@ -1,0 +1,9 @@
+# cf., <https://github.com/github/linguist>
+#
+# Eventually Linguist may accept my patch to add Alex Haskell (a la C2hs Haskell) instead of classifying these files as "Logos"
+# <https://github.com/github/linguist/pull/2446>
+*.x linguist-language=Haskell
+
+# Ignore all the Criterion-generated html
+bench/html/*.html linguist-vendored=true
+bench/html/index.html linguist-vendored=false
