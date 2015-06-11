@@ -1,26 +1,27 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RankNTypes, ScopedTypeVariables #-}
 ----------------------------------------------------------------
---                                                    2015.06.07
+--                                                    2015.06.11
 -- |
 -- Module      :  test/Fractional
 -- Copyright   :  Copyright (c) 2015 wren gayle romano
 -- License     :  BSD2
 -- Maintainer  :  wren@community.haskell.org
 -- Stability   :  test framework
--- Portability :  Haskell98 + ScopedTypeVariables
+-- Portability :  ScopedTypeVariables + RankNTypes
 --
 -- Correctness testing for "Data.ByteString.Lex.Fractional".
 ----------------------------------------------------------------
-module Fractional (main) where
+module Fractional (main, tests) where
 
+import qualified Test.Tasty                   as Tasty
+--import qualified Test.Tasty.SmallCheck        as SC
+import qualified Test.Tasty.QuickCheck        as QC
 import           Data.ByteString              (ByteString)
 import qualified Data.ByteString              as BS
 import qualified Data.ByteString.Char8        as BS8
 import           Data.ByteString.Lex.Fractional
 --import           Control.Monad                ((<=<))
-import qualified Test.QuickCheck              as QC
---import qualified Test.SmallCheck              as SC
 
 ----------------------------------------------------------------
 ----------------------------------------------------------------
@@ -157,13 +158,6 @@ prop_readExponentialLimitedInherent_show x =
 
 ----------------------------------------------------------------
 ----------------------------------------------------------------
-main :: IO ()
-main = do
-    putStrLn "* Fractional tests."
-    runQuickCheckTests
-    runSmallCheckTests
-
-
 floatProxy :: Proxy Float
 floatProxy = Proxy
 
@@ -176,48 +170,79 @@ atFloat = id
 atDouble :: (Double -> a) -> Double -> a
 atDouble = id
 
+qc_testGroup_Proxy
+    :: QC.Testable b
+    => String
+    -> (forall a. (RealFloat a, Ord a, Show a) => Proxy a -> b)
+    -> Tasty.TestTree
+qc_testGroup_Proxy n f =
+    Tasty.testGroup n
+        [ QC.testProperty "Float"  $ f floatProxy
+        , QC.testProperty "Double" $ f doubleProxy
+        ]
 
-runQuickCheckTests :: IO ()
-runQuickCheckTests = do
-    putStrLn "** QuickCheck tests."
-    putStrLn "*** Checking prop_readDecimal_show..."
-    QC.quickCheck $ prop_readDecimal_show floatProxy
-    QC.quickCheck $ prop_readDecimal_show doubleProxy
-    --
-    putStrLn "*** Checking prop_readSignedDecimal_show..."
-    QC.quickCheck $ prop_readSignedDecimal_show floatProxy
-    QC.quickCheck $ prop_readSignedDecimal_show doubleProxy
-    --
-    putStrLn "*** Checking prop_readExponential_show..."
-    QC.quickCheck $ atFloat  prop_readExponential_show
-    QC.quickCheck $ atDouble prop_readExponential_show
-    --
-    putStrLn "*** Checking prop_readSignedExponential_show..."
-    QC.quickCheck $ atFloat  prop_readSignedExponential_show
-    QC.quickCheck $ atDouble prop_readSignedExponential_show
-    --
-    putStrLn "*** Checking prop_readDecimalLimitedInfinity_show..."
-    QC.quickCheck $ prop_readDecimalLimitedInfinity_show floatProxy
-    QC.quickCheck $ prop_readDecimalLimitedInfinity_show doubleProxy
-    --
-    putStrLn "*** Checking prop_readExponentialLimitedInfinity_show..."
-    QC.quickCheck $ atFloat  prop_readExponentialLimitedInfinity_show
-    QC.quickCheck $ atDouble prop_readExponentialLimitedInfinity_show
-    --
-    putStrLn "*** Checking prop_readDecimalLimitedInherent_show..."
-    QC.quickCheck $ prop_readDecimalLimitedInherent_show floatProxy
-    QC.quickCheck $ prop_readDecimalLimitedInherent_show doubleProxy
-    --
-    putStrLn "*** Checking prop_readExponentialLimitedInherent_show..."
-    QC.quickCheck $ atFloat  prop_readExponentialLimitedInherent_show
-    QC.quickCheck $ atDouble prop_readExponentialLimitedInherent_show
-
+qc_testGroup_At
+    :: QC.Testable b
+    => String
+    -> (forall a. (RealFloat a, Ord a, Show a) => a -> b)
+    -> Tasty.TestTree
+qc_testGroup_At n f =
+    Tasty.testGroup n
+        [ QC.testProperty "Float"  $ atFloat  f
+        , QC.testProperty "Double" $ atDouble f
+        ]
 
 ----------------------------------------------------------------
-runSmallCheckTests :: IO ()
-runSmallCheckTests = do
-    -- TODO: how to properly utilize SmallCheck for this module?
-    return ()
+main :: IO ()
+main = Tasty.defaultMain tests
+
+tests :: Tasty.TestTree
+tests = Tasty.testGroup "Fractional Tests"
+    [Tasty.testGroup "Properties"
+        [ quickcheckTests
+        , smallcheckTests
+        ]
+    -- TODO: add some HUnit tests
+    ]
+
+
+quickcheckTests :: Tasty.TestTree
+quickcheckTests = Tasty.testGroup "(checked by QuickCheck)"
+    [ qc_testGroup_Proxy
+        "prop_readDecimal_show"
+         prop_readDecimal_show
+    , qc_testGroup_Proxy
+        "prop_readSignedDecimal_show"
+         prop_readSignedDecimal_show
+    , qc_testGroup_At
+        "prop_readExponential_show"
+         prop_readExponential_show
+    , qc_testGroup_At
+        "prop_readSignedExponential_show"
+         prop_readSignedExponential_show
+    , qc_testGroup_Proxy
+        "prop_readDecimalLimitedInfinity_show"
+         prop_readDecimalLimitedInfinity_show
+    , qc_testGroup_At
+        "prop_readExponentialLimitedInfinity_show"
+         prop_readExponentialLimitedInfinity_show
+    , qc_testGroup_Proxy
+        "prop_readDecimalLimitedInherent_show"
+         prop_readDecimalLimitedInherent_show
+    , qc_testGroup_At
+        "prop_readExponentialLimitedInherent_show"
+         prop_readExponentialLimitedInherent_show
+    ]
+
+
+-- TODO: how to properly utilize SmallCheck for this module?
+-- TODO: how can we set a default 'SmallCheckDepth' while still allowing @--smallcheck-depth@ to override that default?
+smallcheckTests :: Tasty.TestTree
+smallcheckTests = 
+    -- Tasty.localOption (SC.SmallCheckDepth (2 ^ (8 :: Int))) $
+    Tasty.testGroup "(checked by SmallCheck)"
+        [
+        ]
 
 ----------------------------------------------------------------
 ----------------------------------------------------------- fin.

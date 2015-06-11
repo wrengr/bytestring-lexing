@@ -1,5 +1,5 @@
 ----------------------------------------------------------------
--- wren gayle romano <wren@community.haskell.org>   ~ 2015.06.07
+-- wren gayle romano <wren@community.haskell.org>   ~ 2015.06.11
 ----------------------------------------------------------------
 
 -- By and large Cabal >=1.2 is fine; but
@@ -81,12 +81,15 @@ Test-Suite test-all
     Main-Is:        Main.hs
     Other-Modules:  Integral
                  ,  Fractional
-    Build-Depends:  base              >= 4.5 && < 5
-                 ,  bytestring        >= 0.9.2.1 && < 0.11
+    Build-Depends:  base              >= 4.5      && < 5
+                 ,  bytestring        >= 0.9.2.1  && < 0.11
                  ,  bytestring-lexing >= 0.5.0.5
-                 ,  QuickCheck        >= 2.4.1
-                 ,  smallcheck        >= 1.1.1
-                 -- lazysmallcheck    >= 0.6
+                 ,  tasty             >= 0.10.1.2 && < 0.11
+                 ,  tasty-smallcheck  >= 0.8.0.1  && < 0.9
+                 ,  tasty-quickcheck  >= 0.8.3.2  && < 0.9
+                 -- QuickCheck        >= 2.4.1    && < 2.9
+                 -- smallcheck        >= 1.1.1    && < 1.2
+                 -- lazysmallcheck    >= 0.6      && < 0.7
 
 -- cabal configure flags:
 -- * --enable-tests
