@@ -98,11 +98,11 @@ compiler, contact the maintainer.
 * BangPatterns - are used to make the code prettier and to "improve"
     code coverage over the equivalent semantics via the following
     idiom:
-    ```
-    foo x ... z
-        | x `seq` ... `seq` z `seq` False = error "impossible"
-        | otherwise = ...
-    ```
+    
+        foo x ... z
+            | x `seq` ... `seq` z `seq` False = error "impossible"
+            | otherwise = ...
+    
     BangPatterns are supported in GHC as far back as [version
     6.6.1][ghc-bangpatterns], and are also supported by
     [JHC][jhc-bangpatterns] and [UHC][uhc-bangpatterns]. As of 2010,
