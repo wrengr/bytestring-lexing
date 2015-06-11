@@ -9,17 +9,15 @@
 # hurt; unlike what hvr/multi-ghc-travis suggests.
 language: haskell
 
-# Use the container-based infrastructure so we can cache things.
+# Alas, we need sudo to use hvr's PPA. So we can't use the
+# container-based infrastructure, and so we can't cache things :(
 # <http://docs.travis-ci.com/user/workers/container-based-infrastructure/>
 # <http://docs.travis-ci.com/user/caching/>
-sudo: false
-
-# N.B., sandboxes are only available since 1.18. But I think caching
-# these two user directories should be sufficient
-cache:
-  directories:
-    - $HOME/.cabal
-    - $HOME/.ghc
+#sudo: false
+#cache:
+#  directories:
+#    - $HOME/.cabal
+#    - $HOME/.ghc
 
 
 # The only versions natively supported by TravisCI are (7.0, 7.4,
