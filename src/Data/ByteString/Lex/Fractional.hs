@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE BangPatterns, ScopedTypeVariables #-}
 ----------------------------------------------------------------
---                                                    2015.06.09
+--                                                    2015.06.11
 -- |
 -- Module      :  Data.ByteString.Lex.Fractional
 -- Copyright   :  Copyright (c) 2015 wren gayle romano
@@ -49,7 +49,7 @@ import qualified Data.ByteString.Unsafe       as BSU
 import           Data.Word                     (Word8)
 import qualified Data.ByteString.Lex.Integral as I
 import           Data.ByteString.Lex.Integral (readSigned)
-import           Data.ByteString.Lex.Internal (numDecimalDigits)
+import           Data.ByteString.Lex.Internal
 
 ----------------------------------------------------------------
 ----------------------------------------------------------------
@@ -70,21 +70,6 @@ pair !x !y = (x,y)
 -- This is always correct, but for some result types there are other
 -- intermediate types which may be faster.
 
-{-# INLINE isNotPeriod #-}
-isNotPeriod :: Word8 -> Bool
-isNotPeriod w = w /= 0x2E
-
-{-# INLINE isNotE #-}
-isNotE :: Word8 -> Bool
-isNotE w = w /= 0x65 && w /= 0x45
-
-{-# INLINE isDecimal #-}
-isDecimal :: Word8 -> Bool
-isDecimal w = 0x39 >= w && w >= 0x30
-
-{-# INLINE isDecimalZero #-}
-isDecimalZero :: Word8 -> Bool
-isDecimalZero w = w == 0x30
 
 ----------------------------------------------------------------
 ----- Decimal
@@ -145,6 +130,8 @@ readDecimal xs =
 -- those are best handled by helper functions which then use this
 -- function for the actual numerical parsing. This function recognizes
 -- both upper-case, lower-case, and mixed-case hexadecimal.
+--
+-- This is just a thin wrapper around 'I.readHexadecimal'.
 readHexadecimal :: (Fractional a) => ByteString -> Maybe (a, ByteString)
 {-# SPECIALIZE readHexadecimal ::
     ByteString -> Maybe (Float,    ByteString),
@@ -175,6 +162,8 @@ readHexadecimal xs =
 -- \"0o\", but because there are different variants, those are best
 -- handled by helper functions which then use this function for the
 -- actual numerical parsing.
+--
+-- This is just a thin wrapper around 'I.readOctal'.
 readOctal :: (Fractional a) => ByteString -> Maybe (a, ByteString)
 {-# SPECIALIZE readOctal ::
     ByteString -> Maybe (Float,    ByteString),

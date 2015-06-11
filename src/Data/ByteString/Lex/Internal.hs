@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE BangPatterns #-}
 ----------------------------------------------------------------
---                                                    2015.06.05
+--                                                    2015.06.11
 -- |
 -- Module      :  Data.ByteString.Lex.Internal
 -- Copyright   :  Copyright (c) 2010--2015 wren gayle romano
@@ -10,20 +10,55 @@
 -- Stability   :  provisional
 -- Portability :  BangPatterns
 --
--- Some functions we want to share across the other modules without actually exposing them to the user.
+-- Some functions we want to share across the other modules without
+-- actually exposing them to the user.
 ----------------------------------------------------------------
 module Data.ByteString.Lex.Internal
     (
+    -- * Character-based bit-bashing
+      isNotPeriod
+    , isNotE
+    , isDecimal
+    , isDecimalZero
+    , toDigit
+    , addDigit
     -- * Integral logarithms
-      numDigits
+    , numDigits
     , numTwoPowerDigits
     , numDecimalDigits
     ) where
 
-import Data.Word (Word64)
+import Data.Word (Word8, Word64)
 import Data.Bits (Bits(shiftR))
 
 ----------------------------------------------------------------
+----------------------------------------------------------------
+----- Character-based bit-bashing
+
+{-# INLINE isNotPeriod #-}
+isNotPeriod :: Word8 -> Bool
+isNotPeriod w = w /= 0x2E
+
+{-# INLINE isNotE #-}
+isNotE :: Word8 -> Bool
+isNotE w = w /= 0x65 && w /= 0x45
+
+{-# INLINE isDecimal #-}
+isDecimal :: Word8 -> Bool
+isDecimal w = 0x39 >= w && w >= 0x30
+
+{-# INLINE isDecimalZero #-}
+isDecimalZero :: Word8 -> Bool
+isDecimalZero w = w == 0x30
+
+{-# INLINE toDigit #-}
+toDigit :: (Integral a) => Word8 -> a
+toDigit w = fromIntegral (w - 0x30)
+
+{-# INLINE addDigit #-}
+addDigit :: Int -> Word8 -> Int
+addDigit n w = n * 10 + toDigit w
+
 ----------------------------------------------------------------
 ----- Integral logarithms
 

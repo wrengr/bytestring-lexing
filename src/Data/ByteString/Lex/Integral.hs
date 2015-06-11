@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE BangPatterns #-}
 ----------------------------------------------------------------
---                                                    2015.06.09
+--                                                    2015.06.11
 -- |
 -- Module      :  Data.ByteString.Lex.Integral
 -- Copyright   :  Copyright (c) 2010--2015 wren gayle romano
@@ -131,18 +131,6 @@ readDecimal :: (Integral a) => ByteString -> Maybe (a, ByteString)
     ByteString -> Maybe (Word64,  ByteString) #-}
 readDecimal = start
     where
-    isDecimal :: Word8 -> Bool
-    {-# INLINE isDecimal #-}
-    isDecimal w = 0x39 >= w && w >= 0x30
-
-    toDigit :: (Integral a) => Word8 -> a
-    {-# INLINE toDigit #-}
-    toDigit w = fromIntegral (w - 0x30)
-
-    addDigit :: Int -> Word8 -> Int
-    {-# INLINE addDigit #-}
-    addDigit n w = n * 10 + toDigit w
-    
     -- TODO: should we explicitly drop all leading zeros before we jump into the unrolled loop?
     start :: (Integral a) => ByteString -> Maybe (a, ByteString)
     start xs
@@ -236,18 +224,6 @@ readDecimal_ :: (Integral a) => ByteString -> a
     ByteString -> Word64 #-}
 readDecimal_ = start
     where
-    isDecimal :: Word8 -> Bool
-    {-# INLINE isDecimal #-}
-    isDecimal w = 0x39 >= w && w >= 0x30
-
-    toDigit :: (Integral a) => Word8 -> a
-    {-# INLINE toDigit #-}
-    toDigit w = fromIntegral (w - 0x30)
-
-    addDigit :: Int -> Word8 -> Int
-    {-# INLINE addDigit #-}
-    addDigit n w = n * 10 + toDigit w
-
     start xs
         | BS.null xs = 0
         | otherwise  =
