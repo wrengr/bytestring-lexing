@@ -3,11 +3,11 @@ Data.ByteString.Lex.Integral:
     * relax the Integral constraint to Num wherever possible?
 
 ./test/:
-	* get the test suite to return error codes as appropriate; otherwise TravisCI will always say it works!
+    * get the test suite to return error codes as appropriate; otherwise TravisCI will always say it works!
 
 ./bench/html/:
     * Update the css to match the changes elsewhere
-	* set up benchmarking in Cabal
+    * set up benchmarking in Cabal
 
 Data.ByteString.Lex.Lazy.*:
     * reintroduce modules for working with lazy bytestrings
@@ -16,5 +16,7 @@ README.md:
     * Add coveralls badge? Other stuff from <https://raw.githubusercontent.com/mtchavez/circleci/master/README.md>
 
 .travis.yml:
-	* Use hpc-coveralls: <http://guillaume-nargeot.github.io/haskell/2014/04/01/haskell-code-coverage-coveralls-support/>
-	* Use hlint: <https://github.com/guillaume-nargeot/project-euler-haskell/blob/master/.travis.yml>
+    * Use hpc-coveralls: <http://guillaume-nargeot.github.io/haskell/2014/04/01/haskell-code-coverage-coveralls-support/>
+        * also cf., <https://gist.github.com/VoQn/1470421>
+    * Use hlint: <https://github.com/guillaume-nargeot/project-euler-haskell/blob/master/.travis.yml>
+    * Figure out how to get Haddock's coverage info out as an exit code
