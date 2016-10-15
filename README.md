@@ -51,7 +51,7 @@ If you want to run the test suite, use the following standard method
 (with `runhaskell Setup.hs` in lieu of `cabal`, if necessary):
 
     $> cd bytestring-lexing
-    $> cabal configure --enable-tests  --enable-coverage
+    $> cabal configure --enable-tests --enable-coverage
     $> cabal build
     $> cabal test --keep-tix-files
 

@@ -37,7 +37,7 @@ env:
   # This version doesn't recognize -XHaskell98, used by QuickCheck-2.8.1
   #- CABALVER=1.16 GHCVER=6.12.3
   # These versions don't recognize -XSafe, used by smallcheck-1.1.1
-  #- CABALVER=1.16 GHCVER=7.0.1 # base-4.3.0.0, bytestring-0.9.1.8 
+  #- CABALVER=1.16 GHCVER=7.0.1 # base-4.3.0.0, bytestring-0.9.1.8
   #- CABALVER=1.16 GHCVER=7.0.2 # base-4.3.1.0, bytestring-0.9.1.10
   #- CABALVER=1.16 GHCVER=7.0.3 # --''--
   #- CABALVER=1.16 GHCVER=7.0.4 # --''--
@@ -81,7 +81,7 @@ before_install:
       export CABAL=cabal-$CABALVER
       export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
     fi
-  
+
   # The standard configuration for cabal-1.16 gives a horribly
   # obscure error message because it cannot parse the "jobs: $ncpus"
   # line that's there by default. So we're fixing that.
@@ -95,10 +95,19 @@ before_install:
         # /home/travis/.cabal/config: Unrecognized stanza on line 89
         # /home/travis/.cabal/config: Unrecognized field extra-prog-path on line 37
     fi
-  
+
   # Uncomment this line whenever hackage is down.
   #- mkdir -p ~/.cabal && cp travis/config ~/.cabal/config && $CABAL update
   - $CABAL update
+
+  # TODO: for use with <https://github.com/guillaume-nargeot/hpc-coveralls>
+  # TODO: figure out how to do the appropriate version test...
+  #- |
+  #  if [ $CABALVER -ge 1.22 ]; then
+  #      export ENABLE_COVERAGE='--enable-coverage'
+  #  else
+  #      export ENABLE_COVERAGE='--enable-library-coverage'
+  #  fi
 
 
 install:

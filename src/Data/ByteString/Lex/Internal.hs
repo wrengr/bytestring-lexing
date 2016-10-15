@@ -138,7 +138,7 @@ numDecimalDigits n0
     | otherwise  = go 1 (fromIntegral n0 :: Word64)
     where
     limit = fromIntegral (maxBound :: Word64)
-    
+
     fin n bound = if n >= bound then 1 else 0
     go !k !n
         | n < 10        = k
