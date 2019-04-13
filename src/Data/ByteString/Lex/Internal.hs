@@ -4,9 +4,9 @@
 --                                                    2015.06.11
 -- |
 -- Module      :  Data.ByteString.Lex.Internal
--- Copyright   :  Copyright (c) 2010--2015 wren gayle romano
+-- Copyright   :  Copyright (c) 2010--2019 wren gayle romano
 -- License     :  BSD2
--- Maintainer  :  wren@community.haskell.org
+-- Maintainer  :  wren@cpan.org
 -- Stability   :  provisional
 -- Portability :  BangPatterns
 --
