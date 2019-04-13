@@ -3,7 +3,6 @@ bytestring-lexing
 [![Hackage version](https://img.shields.io/hackage/v/bytestring-lexing.svg?style=flat)](https://hackage.haskell.org/package/bytestring-lexing) 
 [![Hackage-Deps](https://img.shields.io/hackage-deps/v/bytestring-lexing.svg?style=flat)](http://packdeps.haskellers.com/specific?package=bytestring-lexing)
 [![TravisCI Build Status](https://img.shields.io/travis/wrengr/bytestring-lexing.svg?style=flat)](https://travis-ci.org/wrengr/bytestring-lexing) 
-[![CircleCI Build Status](https://circleci.com/gh/wrengr/bytestring-lexing.svg?style=shield&circle-token=b57517657c556be6fd8fca92b843f9e4cffaf8d1)](https://circleci.com/gh/wrengr/bytestring-lexing)
 
 The bytestring-lexing package offers extremely efficient `ByteString`
 parsers for some common lexemes: namely integral and fractional
@@ -16,16 +15,11 @@ my knowledge) the best-in-show parser for fractional/floating
 numbers. A record of these benchmarks can be found
 [here](http://code.haskell.org/~wren/bytestring-lexing/bench/html)
 
-Note that the GitHub repository is just a clone of [the Darcs
-repo](http://code.haskell.org/~wren/bytestring-lexing/). I'm testing
-out whether to switch things over to GitHub in order to use TravisCI,
-and an official ticket tracker, etc.
-
 
 ## Install
 
 This is a simple package and should be easy to install. You should
-be able to use one of the following standard methods to install it.
+be able to use any of the standard methods to install it.
 
     -- With cabal-install and without the source:
     $> cabal install bytestring-lexing
@@ -184,11 +178,8 @@ speedup over bytestring-lexing-0.4.3.3!
 
 ## Links
 
-* [Website](http://cl.indiana.edu/~wren/)
+* [Website](https://wrengr.org/)
 * [Blog](http://winterkoninkje.dreamwidth.org/)
 * [Twitter](https://twitter.com/wrengr)
 * [Hackage](http://hackage.haskell.org/package/bytestring-lexing)
-* [Darcs](http://code.haskell.org/~wren/bytestring-lexing)
-* [GitHub (clone)](https://github.com/wrengr/bytestring-lexing)
-* [Haddock (Darcs version)
-    ](http://code.haskell.org/~wren/bytestring-lexing/dist/doc/html/bytestring-lexing)
+* [GitHub](https://github.com/wrengr/bytestring-lexing)
