@@ -1,16 +1,17 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 ----------------------------------------------------------------
---                                                    2012.10.28
+--                                                    2021.10.17
 -- |
 -- Module      :  WallclockIsSpace
--- Copyright   :  Copyright (c) 2010--2015 wren gayle romano
+-- Copyright   :  Copyright (c) 2010--2021 wren gayle romano
 -- License     :  BSD2
--- Maintainer  :  wren@community.haskell.org
+-- Maintainer  :  wren@cpan.org
 -- Stability   :  benchmark
 -- Portability :  portable (FFI)
 --
--- A wall-clock benchmark for comparing different definitions of predicates for detecting whitespace.
+-- A wall-clock benchmark for comparing different definitions of
+-- predicates for detecting whitespace.
 ----------------------------------------------------------------
 module Main (main) where
 
@@ -77,7 +78,7 @@ isSpace_fiddlosopher c
     | c >= '\t' && c <= '\r' = True
     | c == '\xA0'            = True -- -> -- BUG: syntax hilighting fail
     | otherwise              = iswspace (fromIntegral (C.ord c)) /= 0
-    
+
 -- | A variation on the theme of 'isSpace_fiddlosopher'.
 isSpace_fiddlosopher' :: Char -> Bool
 {-# INLINE isSpace_fiddlosopher' #-}

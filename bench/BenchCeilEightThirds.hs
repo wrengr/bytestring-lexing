@@ -16,7 +16,7 @@ main = do
             ]
     defaultMain . flip map funs $ \(fun,f) -> bench fun $ nf (map f) [0..2^15]
     where
-    funs = 
+    funs =
         [ ("naive (<805306368)",      ceilEightThirds_naive)
         , ("orig  (<268435456)",      ceilEightThirds_orig)
         , ("twan1 (<268435456)",      ceilEightThirds_twan1)
@@ -33,7 +33,7 @@ main = do
 
 ----------------------------------------------------------------
 -- Unchecked, but this is what we mean here
-type Nat = Int 
+type Nat = Int
 
 -- | BUG: Even this will overflow on >=805306368.
 ceilEightThirds_naive :: Nat -> Nat

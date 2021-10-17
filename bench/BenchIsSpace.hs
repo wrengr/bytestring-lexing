@@ -1,12 +1,12 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 ----------------------------------------------------------------
---                                                    2012.10.28
+--                                                    2021.10.17
 -- |
 -- Module      :  BenchIsSpace
--- Copyright   :  Copyright (c) 2010--2015 wren gayle romano
+-- Copyright   :  Copyright (c) 2010--2021 wren gayle romano
 -- License     :  BSD2
--- Maintainer  :  wren@community.haskell.org
+-- Maintainer  :  wren@cpan.org
 -- Stability   :  benchmark
 -- Portability :  portable (FFI)
 --

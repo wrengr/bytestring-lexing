@@ -1,13 +1,13 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 ----------------------------------------------------------------
---                                                    2015.06.05
+--                                                    2021.10.17
 -- |
 -- Module      :  BenchReadExponential.NewImplementations
--- Copyright   :  Copyright (c) 2015 wren gayle romano,
+-- Copyright   :  Copyright (c) 2015--2021 wren gayle romano,
 --                              2015 Hirotomo Moriwaki
 -- License     :  BSD2
--- Maintainer  :  wren@community.haskell.org
+-- Maintainer  :  wren@cpan.org
 -- Stability   :  benchmark
 -- Portability :  ScopedTypeVariables, MPTCs, FunDeps
 --
@@ -167,7 +167,7 @@ readExponential2 = start
                     let base = 10 ^ (BS.length xs1 - 1 - BS.length xs2)
                         frac = fromInteger whole + (fromInteger part / base)
                     in Just $ readExponentPart frac xs2
-    
+
     readExponentPart frac xs0
         | BS.null xs0 || (0x65 /= BSU.unsafeHead xs0 && 0x45 /= BSU.unsafeHead xs0) =
             pair frac xs0
@@ -247,18 +247,18 @@ readExponential4 = start
     -- TODO: how can we get our hands on this type without ScopedTypeVariables?
     proxy :: a
     proxy = undefined
-    
+
     -- Double's max fractional value is 9007199254740992, length=16
     -- Float's max fractional value is 16777216, length=8
     magicLength = length . show $ (floatRadix proxy ^ floatDigits proxy)
-    
+
     -- For 'Float' it's sufficient to use 'Word24' as the intermediate
     -- type, and for 'Double' it's sufficient to use 'Word53'.
     -- HACK: the first input type should be specified by a fundep or typefamily!
     {-# INLINE fromFraction #-}
     fromFraction :: Word64 -> Int -> a
     fromFraction frac scale = fromIntegral frac * (10 ^^ scale)
-    
+
     -- BUG: need to deal with leading zeros re 'magicLength'
     start :: ByteString -> Maybe (a, ByteString)
     start xs
@@ -286,7 +286,7 @@ readExponential4 = start
             if isNotPeriod (BSU.unsafeHead xs)
             then xs
             else BS.dropWhile isDecimal (BSU.unsafeTail xs) -- N.B., buggy!
-    
+
     readFractionPart :: Word64 -> Int -> ByteString -> (a, ByteString)
     readFractionPart frac len xs
         | frac `seq` len `seq` False      = undefined
@@ -336,7 +336,7 @@ readExponential31 = start
     {-# INLINE fromFraction #-}
     fromFraction :: (Fractional a) => Integer -> Int -> a
     fromFraction frac scale = fromInteger frac * (10 ^^ scale)
-    
+
     start xs =
         case BSLex.readDecimal xs of
         Nothing           -> Nothing
@@ -380,7 +380,7 @@ readExponential32 = start
     {-# INLINE fromFraction #-}
     fromFraction :: a -> Int -> a
     fromFraction frac scale = frac * (10 ^^ scale)
-    
+
     start xs =
         case BSLex.readDecimal xs of
         Nothing           -> Nothing
@@ -420,32 +420,32 @@ readExponential32 = start
 class Fractional a => DecimalFractional a where
     -- So we can give a type to 'toDF'
     data Significand a :: *
-    
+
     -- So we can define 'fromDF' generically
     fromSignificand :: Significand a -> a
-    
+
     -- Should generally have the form:
     -- > DF {-# UNPACK #-}!(Significand a) {-# UNPACK #-}!Int
     -- But we must put it in the class in order to be able to unpack
     data DecimalFraction a :: *
-    
+
     -- | Generic constructor for 'DecimalFraction'.
     toDF :: Significand a -> Int -> DecimalFraction a
-    
+
     -- | Generic destructors for 'DecimalFraction'; so we can define 'fromDF' generically.
     significandDF :: DecimalFraction a -> Significand a
     exponentDF :: DecimalFraction a -> Int
-    
+
     -- May need to inline the default definition in order to avoid repeated pattern matching...
     fromDF :: DecimalFractional a => DecimalFraction a -> a
     fromDF df = fromSignificand (significandDF df) * (10 ^^ exponentDF df)
     {-# INLINE fromDF #-}
-    
+
     -- May need to inline the default definition in order to avoid repeated pattern matching...
     scaleDF :: DecimalFraction a -> Int -> DecimalFraction a
     scaleDF df scale = toDF (significandDF df) (exponentDF df + scale)
     {-# INLINE scaleDF #-}
-    
+
     -- Doesn't really belong here...
     digitsPrecision :: proxy a -> Maybe Int
 
@@ -458,7 +458,7 @@ digitsPrecisionRealFloat = \_ ->
 instance DecimalFractional Float where
     type Significand Float = Word32
     fromSignificand = fromIntegral
-    
+
     data DecimalFraction Float =
         DF_F {-# UNPACK #-}!Word32 {-# UNPACK #-}!Int
     toDF = DF_F
@@ -466,9 +466,9 @@ instance DecimalFractional Float where
     exponentDF    (DF_F _    scale) = scale
     fromDF        (DF_F frac scale) = fromIntegral frac * (10 ^^ scale)
     scaleDF       (DF_F frac scale) scale' = DF_F frac (scale + scale')
-    
+
     digitsPrecision = digitsPrecisionRealFloat
-    
+
     {-# INLINE fromSignificand #-}
     {-# INLINE toDF #-}
     {-# INLINE significandDF #-}
@@ -480,7 +480,7 @@ instance DecimalFractional Float where
 instance DecimalFractional Double where
     type Significand Double = Word64
     fromSignificand = fromIntegral
-    
+
     data DecimalFraction Double =
         DF_D {-# UNPACK #-}!Word64 {-# UNPACK #-}!Int
     toDF = DF_D
@@ -488,9 +488,9 @@ instance DecimalFractional Double where
     exponentDF    (DF_D _    scale) = scale
     fromDF        (DF_D frac scale) = fromIntegral frac * (10 ^^ scale)
     scaleDF       (DF_D frac scale) scale' = DF_D frac (scale + scale')
-    
+
     digitsPrecision = digitsPrecisionRealFloat
-    
+
     {-# INLINE fromSignificand #-}
     {-# INLINE toDF #-}
     {-# INLINE significandDF #-}
@@ -502,7 +502,7 @@ instance DecimalFractional Double where
 instance Integral a => DecimalFractional (Ratio a) where
     type Significand (Ratio a) = a
     fromSignificand = fromIntegral
-    
+
     -- Might be able to unpack certain @a@, but not all of them, and not 'Integer' specifically.
     data DecimalFraction (Ratio a) = DF_R !a {-# UNPACK #-}!Int
     toDF = DF_R
@@ -510,9 +510,9 @@ instance Integral a => DecimalFractional (Ratio a) where
     exponentDF    (DF_R _    scale) = scale
     fromDF        (DF_R frac scale) = fromIntegral frac * (10 ^^ scale)
     scaleDF       (DF_R frac scale) scale' = DF_R frac (scale + scale')
-    
+
     digitsPrecision = \_ -> Nothing -- could be wrong for non-Integer @a@
-    
+
     {-# INLINE fromSignificand #-}
     {-# INLINE toDF #-}
     {-# INLINE significandDF #-}
@@ -585,7 +585,7 @@ readDecimal41 = start
             if isNotPeriod (BSU.unsafeHead xs)
             then xs
             else BS.dropWhile isDecimal (BSU.unsafeTail xs) -- N.B., is buggy
-    
+
     readFractionPart p whole xs
         | p `seq` whole `seq` False       = undefined
         | BS.null xs                      = error "the impossible happened"
@@ -623,7 +623,7 @@ readExponential41 = start
         -- Short circuits lost by the refactoring: We're done if...
         -- * we dropped the decimal part but it was null
         -- * we read the decimal part but parsing it failed
-    
+
     readExponentPart df xs
         | BS.null xs                 = pair (fromDF df) BS.empty
         | isNotE (BSU.unsafeHead xs) = pair (fromDF df) xs
@@ -688,7 +688,7 @@ readDecimal42 :: (Fractional a) => Int -> ByteString -> Maybe (DecimalFraction a
 readDecimal42 = start
     where
     -- All calls to 'BSLex.readDecimal' are monomorphized at 'Integer', as specified by what 'DF' needs.
-    
+
     -- TODO: verify this is ~inferred~ strict in both @p@ and @xs@ without the guard trick or BangPatterns
     start p xs
         | p `seq` xs `seq` False = undefined
@@ -705,7 +705,7 @@ readDecimal42 = start
                         case lengthDropWhile isDecimalZero ys0 of
                         (0,     _)   -> readFractionPart p 0 ys
                         (scale, zs)  -> afterDroppingZeroes p scale zs
-    
+
     afterDroppingZeroes p scale xs =
         let ys = BS.take p xs in
         case BSLex.readDecimal ys of
@@ -714,7 +714,7 @@ readDecimal42 = start
             let scale' = scale + BS.length xs - BS.length ys'
             in  justPair (DF part (negate scale'))
                     (BS.dropWhile isDecimal ys')
-    
+
     readWholePart p xs =
         let ys = BS.take p xs in
         case BSLex.readDecimal ys of
@@ -746,7 +746,7 @@ readDecimal42 = start
                 Just (x1,xs1)
                     | isDecimal x1 -> BS.dropWhile isDecimal xs1
                     | otherwise    -> xs
-    
+
     -- N.B., @BS.null xs@ is impossible as it begins with a period; see the call sites.
     -- If @not (BS.null ys')@ then the @BS.dropWhile isDecimal@ is a noop; but there's no reason to branch on testing for that.
     -- The @+1@ in @BS.drop (1+scale)@ is for the 'BSU.unsafeTail' in @ys@.
@@ -758,7 +758,7 @@ readDecimal42 = start
             let scale = BS.length ys - BS.length ys'
             in  justPair (fractionDF whole scale part)
                     (BS.dropWhile isDecimal (BS.drop (1+scale) xs))
-                
+
 
 
 -- | A variant of 'readExponential41' using 'readDecimal42'.
@@ -773,7 +773,7 @@ readExponential42 = start
         case readDecimal42 p xs of
         Nothing       -> Nothing
         Just (df,xs') -> Just $! readExponentPart df xs'
-    
+
     readExponentPart df xs
         | BS.null xs                 = pair (fromDF df) BS.empty
         | isNotE (BSU.unsafeHead xs) = pair (fromDF df) xs
@@ -814,7 +814,7 @@ readDecimal12 = start
                         Just (part, ws) ->
                             let scale' = scale + BS.length zs - BS.length ws
                             in  justPair (DF part (negate scale')) ws
-    
+
     readWholePart xs =
         case BSLex.readDecimal xs of
         Nothing          -> Nothing
@@ -831,7 +831,7 @@ readDecimal12 = start
         Just (part, ys) ->
             let scale = BS.length xs - 1 - BS.length ys
             in  justPair (fractionDF whole scale part) ys
-                
+
 
 -- | A variant of 'readExponential11' using 'readDecimal12'.
 readExponential12 :: (Fractional a) => ByteString -> Maybe (a, ByteString)
@@ -845,7 +845,7 @@ readExponential12 = start
         case readDecimal12 xs of
         Nothing       -> Nothing
         Just (df,xs') -> Just $! readExponentPart df xs'
-    
+
     readExponentPart df xs
         | BS.null xs                 = pair (fromDF df) BS.empty
         | isNotE (BSU.unsafeHead xs) = pair (fromDF df) xs

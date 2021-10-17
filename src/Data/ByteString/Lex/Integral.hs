@@ -1,10 +1,10 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE BangPatterns #-}
 ----------------------------------------------------------------
---                                                    2015.06.11
+--                                                    2021.10.17
 -- |
 -- Module      :  Data.ByteString.Lex.Integral
--- Copyright   :  Copyright (c) 2010--2019 wren gayle romano
+-- Copyright   :  Copyright (c) 2010--2021 wren gayle romano
 -- License     :  BSD2
 -- Maintainer  :  wren@cpan.org
 -- Stability   :  provisional
@@ -335,7 +335,7 @@ unsafePackDecimal n0 =
             loop   q (p `plusPtr` negate 2)
         | n >= 10   = write2 n p
         | otherwise = poke p (0x30 + fromIntegral n)
-    
+
     write2 !i0 !p = do
         let i = fromIntegral i0; j = i + i
         poke p                      (getDigit $! j + 1)

@@ -1,10 +1,10 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE BangPatterns #-}
 ----------------------------------------------------------------
---                                                    2015.06.11
+--                                                    2021.10.17
 -- |
 -- Module      :  Data.ByteString.Lex.Internal
--- Copyright   :  Copyright (c) 2010--2019 wren gayle romano
+-- Copyright   :  Copyright (c) 2010--2021 wren gayle romano
 -- License     :  BSD2
 -- Maintainer  :  wren@cpan.org
 -- Stability   :  provisional

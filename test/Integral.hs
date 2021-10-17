@@ -1,12 +1,12 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE RankNTypes, FlexibleContexts #-}
 ----------------------------------------------------------------
---                                                    2015.06.11
+--                                                    2021.10.17
 -- |
 -- Module      :  test/Integral
--- Copyright   :  Copyright (c) 2010--2015 wren gayle romano
+-- Copyright   :  Copyright (c) 2010--2021 wren gayle romano
 -- License     :  BSD2
--- Maintainer  :  wren@community.haskell.org
+-- Maintainer  :  wren@cpan.org
 -- Stability   :  test framework
 -- Portability :  FlexibleContexts + RankNTypes
 --
@@ -197,7 +197,7 @@ quickcheckTests = Tasty.testGroup "(checked by QuickCheck)"
 
 -- TODO: how can we set our default 'SmallCheckDepth' to 2^8 while still allowing @--smallcheck-depth@ to override that default?
 smallcheckTests :: Tasty.TestTree
-smallcheckTests = 
+smallcheckTests =
     Tasty.localOption (SC.SmallCheckDepth (2 ^ (8 :: Int))) $
     Tasty.testGroup "(checked by SmallCheck)"
     [ sc_testGroup

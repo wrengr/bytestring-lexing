@@ -2,12 +2,12 @@
 -- Turn off some common warnings about Alex-generated code.
 -- {-# OPTIONS_GHC -Wall -fno-warn-tabs -fno-warn-missing-signatures #-}
 ----------------------------------------------------------------
---                                                    2012.01.25
+--                                                    2021.10.17
 -- |
 -- Module      :  Data.ByteString.Lex.Double
--- Copyright   :  Copyright (c) 2008--2011 Don Stewart
+-- Copyright   :  Copyright (c) 2011--2021 wren gayle romano, 2008--2011 Don Stewart
 -- License     :  BSD2/MIT
--- Maintainer  :  wren@community.haskell.org
+-- Maintainer  :  wren@cpan.org
 -- Stability   :  stable
 -- Portability :  Haskell98
 --

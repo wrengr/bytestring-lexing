@@ -1,12 +1,12 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 ----------------------------------------------------------------
---                                                    2012.01.25
+--                                                    2021.10.17
 -- |
 -- Module      :  Data.ByteString.Lex.Internal
--- Copyright   :  Copyright (c) 2008--2011 Don Stewart.
+-- Copyright   :  Copyright (c) 2011--2015 wren gayle romano, 2008--2011 Don Stewart.
 -- License     :  BSD2/MIT
--- Maintainer  :  wren@community.haskell.org
+-- Maintainer  :  wren@cpan.org
 -- Stability   :  stable
 -- Portability :  Haskell98 + FFI
 --
@@ -29,7 +29,7 @@ strtod :: BS.ByteString -> Double
 strtod b =
     BSI.inlinePerformIO . BS.useAsCString b $ \ptr -> c_strtod ptr nullPtr
 
-foreign import ccall unsafe "stdlib.h strtod" 
+foreign import ccall unsafe "stdlib.h strtod"
     c_strtod :: CString -> Ptr CString -> IO Double
 
 ----------------------------------------------------------------

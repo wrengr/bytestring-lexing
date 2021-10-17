@@ -1,13 +1,13 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE OverloadedStrings, MagicHash, BangPatterns #-}
 ----------------------------------------------------------------
---                                                    2012.01.31
+--                                                    2021.10.17
 -- |
 -- Module      :  BenchReadDecimal
--- Copyright   :  Copyright (c) 2010--2015 wren gayle romano,
+-- Copyright   :  Copyright (c) 2010--2021 wren gayle romano,
 --                              2012 Erik de Castro Lopo <erikd@mega-nerd.com>
 -- License     :  BSD2
--- Maintainer  :  wren@community.haskell.org
+-- Maintainer  :  wren@cpan.org
 -- Stability   :  benchmark
 -- Portability :  portable
 --
@@ -186,7 +186,7 @@ readIntegralMHFast :: Integral a => ByteString -> a
 readIntegralMHFast s = go 0 0 s
     where
     len = BS8.length s
-    
+
     go :: Integral a => a -> Int -> ByteString -> a
     go n i bs
         | n `seq` i `seq` bs `seq` False = undefined
@@ -253,7 +253,7 @@ readDecimalOrig = start
             w | 0x39 >= w && w >= 0x30 ->
                     Just $ loop (fromIntegral (w - 0x30)) (BSU.unsafeTail xs)
               | otherwise -> Nothing
-    
+
     loop n xs
         | n `seq` xs `seq` False = undefined -- for strictness analysis
         | BS.null xs = (n, BS.empty)         -- not @xs@, to help GC
@@ -297,7 +297,7 @@ readDecimalUnrolled = start
             w | 0x39 >= w && w >= 0x30 ->
                     Just $ loop0 (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
               | otherwise -> Nothing
-    
+
     loop0 :: Integral a => a -> ByteString -> (a, ByteString)
     loop0 m xs
         | m `seq` xs `seq` False = undefined
@@ -307,7 +307,7 @@ readDecimalUnrolled = start
             w | 0x39 >= w && w >= 0x30 ->
                     loop1 m (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
               | otherwise -> (m, xs)
-    
+
     loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8 :: Integral a => a -> Int -> ByteString -> (a, ByteString)
     loop1 m n xs
         | m `seq` n `seq` xs `seq` False = undefined
@@ -394,15 +394,15 @@ readDecimalUnrolled' = start
     isDecimal :: Word8 -> Bool
     {-# INLINE isDecimal #-}
     isDecimal w = 0x39 >= w && w >= 0x30
-    
+
     toDigit :: Integral a => Word8 -> a
     {-# INLINE toDigit #-}
     toDigit w = fromIntegral (w - 0x30)
-    
+
     addDigit :: Int -> Word8 -> Int
     {-# INLINE addDigit #-}
     addDigit n w = n * 10 + toDigit w
-    
+
     start :: Integral a => ByteString -> Maybe (a, ByteString)
     start xs
         | BS.null xs = Nothing
@@ -410,7 +410,7 @@ readDecimalUnrolled' = start
             case BSU.unsafeHead xs of
             w | isDecimal w -> Just $ loop0 (toDigit w) (BSU.unsafeTail xs)
               | otherwise   -> Nothing
-    
+
     loop0 :: Integral a => a -> ByteString -> (a, ByteString)
     loop0 m xs
         | m `seq` xs `seq` False = undefined
@@ -418,7 +418,7 @@ readDecimalUnrolled' = start
             loop1 m (toDigit w) (BSU.unsafeTail xs)
         | otherwise = (m, xs)
         where w = BSU.unsafeHead xs
-    
+
     loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8
         :: Integral a => a -> Int -> ByteString -> (a, ByteString)
     loop1 m n xs
@@ -493,11 +493,11 @@ readDecimalUnrolledAlt_Int64 = unwrap . start
             w | 0x39 >= w && w >= 0x30 ->
                     Just $ loop0 (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
               | otherwise -> Nothing
-    
+
     loop0 :: Int64 -> ByteString -> (Int64, ByteString)
     loop0 m xs
         | m `seq` xs `seq` False = undefined
-        | BS.length xs >= 9 = 
+        | BS.length xs >= 9 =
             case BSU.unsafeHead xs of
             w | 0x39 >= w && w >= 0x30 ->
                     fast1 m (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
@@ -508,7 +508,7 @@ readDecimalUnrolledAlt_Int64 = unwrap . start
             w | 0x39 >= w && w >= 0x30 ->
                     finish1 m (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
               | otherwise -> (m, xs)
-    
+
     fast1, fast2, fast3, fast4, fast5, fast6, fast7, fast8 :: Int64 -> Int -> ByteString -> (Int64, ByteString)
     fast1 m n xs
         | m `seq` n `seq` xs `seq` False = undefined
@@ -566,7 +566,7 @@ readDecimalUnrolledAlt_Int64 = unwrap . start
             w | 0x39 >= w && w >= 0x30 ->
                     loop0 (m*1000000000 + fromIntegral (n*10 + fromIntegral(w-0x30))) (BSU.unsafeTail xs)
               | otherwise -> (m*100000000 + fromIntegral n, xs)
-    
+
     finish1, finish2, finish3, finish4, finish5, finish6, finish7, finish8 :: Int64 -> Int -> ByteString -> (Int64, ByteString)
     finish1 m n xs
         | m `seq` n `seq` xs `seq` False = undefined
@@ -649,7 +649,7 @@ readDecimalTwiceUnrolled_Integer = unwrap . start
             w | 0x39 >= w && w >= 0x30 ->
                     Just $ go00 (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
               | otherwise -> Nothing
-    
+
     go00 :: Integer -> ByteString -> (Integer, ByteString)
     go00 o xs
         | o `seq` xs `seq` False = undefined
@@ -659,7 +659,7 @@ readDecimalTwiceUnrolled_Integer = unwrap . start
             w | 0x39 >= w && w >= 0x30 ->
                     go01 o (fromIntegral(w-0x30)) (BSU.unsafeTail xs)
               | otherwise -> (o, xs)
-    
+
     go01, go02, go03, go04, go05, go06, go07, go08
         :: Integer -> Int -> ByteString -> (Integer, ByteString)
     go01 o n xs
@@ -839,22 +839,22 @@ readDecimalUnwrapped = start
     isDecimal :: Word8 -> Bool
     {-# INLINE isDecimal #-}
     isDecimal w = 0x39 >= w && w >= 0x30
-    
+
     toDigit :: Integral a => Word8 -> a
     {-# INLINE toDigit #-}
     toDigit w = fromIntegral (w - 0x30)
-    
+
     addDigit :: Int -> Word8 -> Int
     {-# INLINE addDigit #-}
     addDigit n w = n * 10 + toDigit w
-    
+
     start xs
         | BS.null xs = 0
         | otherwise  =
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop0 (toDigit w) (BSU.unsafeTail xs)
               | otherwise   -> 0
-    
+
     loop0 :: Integral a => a -> ByteString -> a
     loop0 m xs
         | m `seq` xs `seq` False = undefined
@@ -863,7 +863,7 @@ readDecimalUnwrapped = start
             case BSU.unsafeHead xs of
             w | isDecimal w -> loop1 m (toDigit w) (BSU.unsafeTail xs)
               | otherwise   -> m
-    
+
     loop1, loop2, loop3, loop4, loop5, loop6, loop7, loop8
         :: Integral a => a -> Int -> ByteString -> a
     loop1 m n xs

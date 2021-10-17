@@ -1,10 +1,10 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE BangPatterns, ScopedTypeVariables #-}
 ----------------------------------------------------------------
---                                                    2015.06.11
+--                                                    2021.10.17
 -- |
 -- Module      :  Data.ByteString.Lex.Fractional
--- Copyright   :  Copyright (c) 2015--2019 wren gayle romano
+-- Copyright   :  Copyright (c) 2015--2021 wren gayle romano
 -- License     :  BSD2
 -- Maintainer  :  wren@cpan.org
 -- Stability   :  provisional

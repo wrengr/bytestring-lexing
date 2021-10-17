@@ -1,13 +1,13 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE CPP, ScopedTypeVariables #-}
 ----------------------------------------------------------------
---                                                    2015.06.05
+--                                                    2021.10.17
 -- |
 -- Module      :  BenchReadExponential
--- Copyright   :  Copyright (c) 2015 wren gayle romano,
+-- Copyright   :  Copyright (c) 2015--2021 wren gayle romano,
 --                              2015 Hirotomo Moriwaki
 -- License     :  BSD2
--- Maintainer  :  wren@community.haskell.org
+-- Maintainer  :  wren@cpan.org
 -- Stability   :  benchmark
 -- Portability :  CPP, ScopedTypeVariables
 --
@@ -68,7 +68,7 @@ atDouble = id
 
 atRational :: (a -> Rational) -> a -> Rational
 atRational = id
-    
+
 ----------------------------------------------------------------
 -- The version currently used by bytestring-read
 bytestringRead :: (BSRead.ReadFractional a) => ByteString -> a

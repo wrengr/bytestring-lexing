@@ -1,18 +1,21 @@
 ----------------------------------------------------------------
--- wren gayle romano <wren@community.haskell.org>   ~ 2015.06.10
+-- wren gayle romano <wren@cpan.org>                ~ 2021.10.17
 ----------------------------------------------------------------
 
-Name:           bytestring-lexing-bench
-Version:        0.11.0
-Cabal-Version:  >= 1.2
+-- Cabal >=1.10 is required by Hackage.
+Cabal-Version:  >= 1.10
 Build-Type:     Simple
+
+Name:           bytestring-lexing-bench
+Version:        0.11.0.1
 Stability:      debugging
-Copyright:      Copyright (c) 2010--2015 wren gayle romano
+Copyright:      Copyright (c) 2010–2021 wren gayle romano
 License:        BSD2
 License-File:   ../LICENSE
 Author:         wren gayle romano
-Maintainer:     wren@community.haskell.org
-Homepage:       http://code.haskell.org/~wren/
+Maintainer:     wren@cpan.org
+Homepage:       https://wrengr.org/software/hackage.html
+Bug-Reports:    https://github.com/wrengr/bytestring-lexing/issues
 Category:       Data
 Synopsis:       Microbenchmarking for common functions.
 Description:    Microbenchmarking for common functions.
@@ -50,12 +53,12 @@ Executable bench-isSpace
     Main-Is:        BenchIsSpace.hs
     GHC-Options:    -main-is BenchIsSpace.main
     Build-Depends:  criterion >= 0.5.0
-    
+
     if flag(base4)
         Build-Depends: base >= 4 && < 5
     else
         Build-Depends: base < 4
-    
+
     if flag(bytestringInBase)
         Build-Depends: base >= 2.0 && < 2.2
     else
@@ -67,7 +70,7 @@ Executable bench-numDigits
     Main-Is:        BenchNumDigits.hs
     GHC-Options:    -main-is BenchNumDigits.main
     Build-Depends:  criterion >= 0.5.0
-    
+
     if flag(base4)
         Build-Depends: base >= 4 && < 5
     else
@@ -82,12 +85,12 @@ Executable bench-readDecimal
                  ,  bytestring-lexing >= 0.4.0
                  ,  ghc-prim          >= 0.2.0
                  ,  QuickCheck        >= 2.4.1
-    
+
     if flag(base4)
         Build-Depends: base >= 4 && < 5
     else
         Build-Depends: base < 4
-    
+
     if flag(bytestringInBase)
         Build-Depends: base >= 2.0 && < 2.2
     else
@@ -100,12 +103,12 @@ Executable bench-packDecimal
     GHC-Options:    -main-is BenchPackDecimal.main
     Build-Depends:  criterion         >= 0.5.0
                  ,  bytestring-lexing >= 0.4.2
-    
+
     if flag(base4)
         Build-Depends: base >= 4 && < 5
     else
         Build-Depends: base < 4
-    
+
     if flag(bytestringInBase)
         Build-Depends: base >= 2.0 && < 2.2
     else
@@ -118,7 +121,7 @@ Executable bench-ceilEightThirds
     GHC-Options:    -main-is BenchCeilEightThirds.main
     Build-Depends:  criterion  >= 0.5.0
                  ,  QuickCheck >= 2.4.1
-    
+
     if flag(base4)
         Build-Depends: base >= 4 && < 5
     else
@@ -141,12 +144,12 @@ Executable bench-readExponential
                  ,  scientific        >= 0.3.3.8
                  ,  QuickCheck        >= 2.4.1
                  ,  deepseq           >= 1.3.0
-    
+
     if flag(base4)
         Build-Depends: base >= 4 && < 5
     else
         Build-Depends: base < 4
-    
+
     if flag(bytestringInBase)
         Build-Depends: base >= 2.0 && < 2.2
     else
@@ -157,7 +160,7 @@ Executable bench-readExponential
         Build-Depends: base >= 3 && < 5, bytestring, array
     else
         Build-Depends: base < 3
-    
+
     -- bytestring-posn was added in alex >= 2.3 (2008)
     -- GHC 7.8.2 requires alex >= 3.1.3...
     if impl(ghc >= 7.8)

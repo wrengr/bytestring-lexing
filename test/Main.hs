@@ -1,11 +1,11 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 ----------------------------------------------------------------
---                                                    2015.06.11
+--                                                    2021.10.17
 -- |
 -- Module      :  test/Main
--- Copyright   :  Copyright (c) 2015 wren gayle romano
+-- Copyright   :  Copyright (c) 2015--2021 wren gayle romano
 -- License     :  BSD2
--- Maintainer  :  wren@community.haskell.org
+-- Maintainer  :  wren@cpan.org
 -- Stability   :  benchmark
 -- Portability :  Haskell98
 --

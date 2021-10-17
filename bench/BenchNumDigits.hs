@@ -2,19 +2,19 @@
 {-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -XMagicHash #-}
 ----------------------------------------------------------------
---                                                    2011.05.30
+--                                                    2021.10.17
 -- |
 -- Module      :  BenchNumDigits
--- Copyright   :  Copyright (c) 2011--2015 wren gayle romano
+-- Copyright   :  Copyright (c) 2011--2021 wren gayle romano
 -- License     :  BSD2
--- Maintainer  :  wren@community.haskell.org
+-- Maintainer  :  wren@cpan.org
 -- Stability   :  experimental
 -- Portability :  portable
 --
 -- A benchmark for comparing different definitions of functions for
 -- getting the number of (decimal) digits in a number. In a previous
 -- run the results were:
--- 
+--
 -- * numDigits     : 61.31797 ms +/- 275.4235 us
 -- * numDigits'    : 56.50285 ms +/- 431.3593 us
 -- * numDigitsTCO  : 67.88873 ms +/- 146.9378 us
@@ -50,7 +50,7 @@ import Data.Word (Word)
 
 import Control.Monad.ST
 import Data.STRef
- 
+
 import Criterion      (bench, nf)
 import Criterion.Main (defaultMain)
 ----------------------------------------------------------------
@@ -71,7 +71,7 @@ main = defaultMain
     where
     base  = 10
     limit = 2 ^ (20 :: Int)
-    
+
     -- Not really map
     seqMap :: (Int -> Int) -> [Int] -> ()
     seqMap _ []     = ()

@@ -1,12 +1,12 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE RankNTypes, ScopedTypeVariables #-}
 ----------------------------------------------------------------
---                                                    2015.06.11
+--                                                    2021.10.17
 -- |
 -- Module      :  test/Fractional
--- Copyright   :  Copyright (c) 2015 wren gayle romano
+-- Copyright   :  Copyright (c) 2015--2021 wren gayle romano
 -- License     :  BSD2
--- Maintainer  :  wren@community.haskell.org
+-- Maintainer  :  wren@cpan.org
 -- Stability   :  test framework
 -- Portability :  ScopedTypeVariables + RankNTypes
 --
@@ -27,7 +27,7 @@ import           Data.ByteString.Lex.Fractional
 ----------------------------------------------------------------
 -- We reimplement Data.Proxy to avoid build errors on older systems
 
-data Proxy a = Proxy 
+data Proxy a = Proxy
 
 asProxyTypeOf :: a -> Proxy a -> a
 asProxyTypeOf a _ = a
@@ -238,7 +238,7 @@ quickcheckTests = Tasty.testGroup "(checked by QuickCheck)"
 -- TODO: how to properly utilize SmallCheck for this module?
 -- TODO: how can we set a default 'SmallCheckDepth' while still allowing @--smallcheck-depth@ to override that default?
 smallcheckTests :: Tasty.TestTree
-smallcheckTests = 
+smallcheckTests =
     -- Tasty.localOption (SC.SmallCheckDepth (2 ^ (8 :: Int))) $
     Tasty.testGroup "(checked by SmallCheck)"
         [

@@ -1,12 +1,12 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE CPP #-}
 ----------------------------------------------------------------
---                                                    2015.06.10
+--                                                    2021.10.17
 -- |
 -- Module      :  BenchPackDecimal
--- Copyright   :  Copyright (c) 2011--2015 wren gayle romano
+-- Copyright   :  Copyright (c) 2011--2021 wren gayle romano
 -- License     :  BSD2
--- Maintainer  :  wren@community.haskell.org
+-- Maintainer  :  wren@cpan.org
 -- Stability   :  experimental
 -- Portability :  CPP
 --
@@ -48,7 +48,7 @@ main = defaultMain
     where
     -- BUG: using an upper limit of 2^30 causes OOM failure!!
     limit = 2 ^ (20 :: Int)
-    
+
     -- Not really map
     seqMap :: (Int -> Maybe ByteString) -> [Int] -> ()
     seqMap _ []     = ()
@@ -73,7 +73,7 @@ packDecimal0 = start
     start n
         | n < 0     = Nothing
         | otherwise = Just $ loop n BS.empty
-    
+
     loop n xs
         | n `seq` xs `seq` False = undefined -- for strictness analysis
         | n <= 9    = BS.cons (fromIntegral n + 0x30) xs
@@ -84,7 +84,7 @@ packDecimal0 = start
             in loop q (BS.cons (fromIntegral r + 0x30) xs)
 
 
--- | From 
+-- | From
 -- <http://www.haskell.org/pipermail/haskell-cafe/2009-August/065854.html>
 -- modified to use 'quot' instead of 'div', to ensure strictness,
 -- and using more guard notation (but this last one's compiled away).
@@ -207,7 +207,7 @@ packDecimal3 n0
             loop q (p `plusPtr` negate 2)
         | n >= 10   = write2 n p
         | otherwise = poke p (0x30 + fromIntegral n)
-    
+
     -- write2 :: iota a. a -> Ptr Word8 -> IO ()
     write2 i0 p = do
         let i = fromIntegral i0; j = i + i

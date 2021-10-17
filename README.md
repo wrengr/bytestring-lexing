@@ -13,7 +13,7 @@ As of version 0.3.0, bytestring-lexing offers the best-in-show
 parsers for integral values. And as of version 0.5.0 it offers (to
 my knowledge) the best-in-show parser for fractional/floating
 numbers. A record of these benchmarks can be found
-[here](http://code.haskell.org/~wren/bytestring-lexing/bench/html)
+[here](https://github.com/wrengr/bytestring-lexing/tree/master/bench/html)
 
 
 ## Install
@@ -140,7 +140,7 @@ inputs.
 ## Benchmarks: Version 0.5.0 (2015-05-06)
 
 The Criterion output of the benchmark discussed below, [is available
-here](http://code.haskell.org/~wren/bytestring-lexing/bench/html/readExponential-0.5.0_ereshkigal.html).
+here](https://github.com/wrengr/bytestring-lexing/blob/master/bench/html/readExponential-0.5.0_ereshkigal.html).
 The main competitors we compare against are the previous version
 of bytestring-lexing (which already surpassed text and
 attoparsec/scientific) and bytestring-read which was the previous
