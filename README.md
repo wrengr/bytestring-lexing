@@ -19,24 +19,9 @@ numbers. A record of these benchmarks can be found
 ## Install
 
 This is a simple package and should be easy to install. You should
-be able to use any of the standard methods to install it.
+be able to use the standard:
 
-    -- With cabal-install and without the source:
     $> cabal install bytestring-lexing
-    
-    -- With cabal-install and with the source already:
-    $> cd bytestring-lexing
-    $> cabal install
-    
-    -- Without cabal-install, but with the source already:
-    $> cd bytestring-lexing
-    $> runhaskell Setup.hs configure --user
-    $> runhaskell Setup.hs build
-    $> runhaskell Setup.hs haddock --hyperlink-source
-    $> runhaskell Setup.hs copy
-    $> runhaskell Setup.hs register
-
-The Haddock step is optional.
 
 
 ### Testing
