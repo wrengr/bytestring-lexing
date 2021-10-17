@@ -1,3 +1,7 @@
+0.5.0.7 (2021-10-16):
+    - Switching from TravisCI to GithubActions
+	- Linting Haddock warnings
+	- Remove some trailing whitespaces
 0.5.0.6 (2019-04-13):
     - Nudging everything to the correct urls, emails, etc
 0.5.0.2 (2015-05-06):

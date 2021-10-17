@@ -137,7 +137,7 @@ readHexadecimal :: (Fractional a) => ByteString -> Maybe (a, ByteString)
     ByteString -> Maybe (Float,    ByteString),
     ByteString -> Maybe (Double,   ByteString),
     ByteString -> Maybe (Rational, ByteString) #-}
-readHexadecimal xs = 
+readHexadecimal xs =
     case I.readHexadecimal xs of
     Nothing       -> Nothing
     Just (n, xs') -> justPair (fromInteger n) xs'
@@ -169,7 +169,7 @@ readOctal :: (Fractional a) => ByteString -> Maybe (a, ByteString)
     ByteString -> Maybe (Float,    ByteString),
     ByteString -> Maybe (Double,   ByteString),
     ByteString -> Maybe (Rational, ByteString) #-}
-readOctal xs = 
+readOctal xs =
     case I.readOctal xs of
     Nothing       -> Nothing
     Just (n, xs') -> justPair (fromInteger n) xs'
@@ -233,7 +233,7 @@ readExponential xs =
 -- representation, as defined by a fundep or typefamily! We use
 -- 'Integer' which is sufficient for all cases, but it'd be better
 -- to use @Word24@ for 'Float', @Word53@ for 'Double', and @a@ for
--- @'Ratio' a@.
+-- @'Data.Ratio.Ratio' a@.
 data DecimalFraction a = DF !Integer {-# UNPACK #-}!Int
 -- BUG: Can't unpack integers...
 
