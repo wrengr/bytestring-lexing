@@ -53,15 +53,15 @@ jobs:
     - name: Build
       run: |
         cabal build all
-    ## BUG: our Tasty tests aren't hooked into cabal yet...
-    ## TODO: why does bytestring run tests via sdist stuff instead of just directly?
-    #- name: Test
-    #  run: |
-    #    cabal sdist -z -o .
-    #    cabal get unification-fd-*.tar.gz
-    #    cd unification-fd-*/
-    #    cp ../cabal.project .
-    #    cabal test --test-show-details=direct
+    # TODO: why does bytestring run tests via sdist stuff instead of just directly?
+    # TODO(2021-10-16): make sure this actually works to run our tests.
+    - name: Test
+      run: |
+        cabal sdist -z -o .
+        cabal get unification-fd-*.tar.gz
+        cd unification-fd-*/
+        cp ../cabal.project .
+        cabal test --test-show-details=direct
     ## We have no benchmarks yet
     #- name: Bench
     #  run: |
