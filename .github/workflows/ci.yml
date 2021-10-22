@@ -58,14 +58,14 @@ jobs:
     - name: Test
       run: |
         cabal sdist -z -o .
-        cabal get unification-fd-*.tar.gz
-        cd unification-fd-*/
-        cp ../cabal.project .
+        cabal get bytestring-lexing-*.tar.gz
+        cd bytestring-lexing-*/
+        cp ../bytestring-lexing.cabal .
         cabal test --test-show-details=direct
     ## We have no benchmarks yet
     #- name: Bench
     #  run: |
-    #    cd unification-fd-*/
+    #    cd bytestring-lexing-*/
     #    cabal bench --benchmark-option=-l
     - name: Haddock
       run: cabal haddock
