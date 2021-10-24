@@ -28,9 +28,8 @@ jobs:
         # Note(2021-10-23): All these versions resolve to using the
         #   latest Cabal (3.4.0.0); they do *not* use the version of
         #   Cabal that originally shipped with the version of GHC.
-        # Note(2021-10-23): the '9.2.0.20210821' is 9.2 RC1
         os: [ubuntu-latest]
-        ghc: ['8.0.2', '8.2.2', '8.4.4', '8.6.5', '8.8.4', '8.10.3', '9.0.1', '9.2.0.20210821']
+        ghc: ['8.0.2', '8.2.2', '8.4.4', '8.6.5', '8.8.4', '8.10.3', '9.0.1']
         include:
         # This package has no build details sepcific to Win/Mac,
         # so (in conjunction with the full list above for Ubuntu)
