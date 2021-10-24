@@ -341,6 +341,9 @@ unsafePackDecimal n0 =
         poke p                      (getDigit $! j + 1)
         poke (p `plusPtr` negate 1) (getDigit j)
 
+-- TODO(2021-10-23): We might should replace this with the 'Addr#'
+--   hack that newer Bytestring uses for hexadecimal stuff:
+--   <https://github.com/haskell/bytestring/pull/418>
 packDecimal_digits :: ByteString
 {-# NOINLINE packDecimal_digits #-}
 packDecimal_digits = BS8.pack
@@ -349,7 +352,6 @@ packDecimal_digits = BS8.pack
     \4041424344454647484950515253545556575859\
     \6061626364656667686970717273747576777879\
     \8081828384858687888990919293949596979899"
-    -- BUG: jEdit syntax highlighting fail: ->
 
 ----------------------------------------------------------------
 ----------------------------------------------------------------
@@ -479,6 +481,10 @@ _asHexadecimal_overflow =
 
 
 -- TODO: benchmark against the magichash hack used in Warp.
+-- TODO(2021-10-23): Benchmark against the 'Addr#' hack that newer
+--   Bytestring uses for hexadecimal stuff:
+--   <https://github.com/haskell/bytestring/pull/418>
+--
 -- | The lower-case ASCII hexadecimal digits, in numerical order
 -- for use as a lookup table.
 hexDigits :: ByteString
