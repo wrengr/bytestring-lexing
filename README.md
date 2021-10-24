@@ -26,21 +26,26 @@ be able to use the standard:
 
 ### Testing
 
-If you want to run the test suite, use the following standard method
-(with `runhaskell Setup.hs` in lieu of `cabal`, if necessary):
+To run the test suite (without coverage information), you can use
+the standard method (with `runhaskell Setup.hs` in lieu of `cabal`,
+if necessary):
 
     $> cd bytestring-lexing
-    $> cabal configure --enable-tests --enable-coverage
+    $> cabal configure --enable-tests
     $> cabal build
-    $> cabal test --keep-tix-files
+    $> cabal test
 
-The results of the code coverage are in
+If you want coverage information as well, there are a few options
+depending on your version of Cabal.  For modern cabal with v2/nix-style
+builds, add `--enable-coverage` to the configure step, and the
+results will be located at
+`./dist-newstyle/build/$ARCH/$GHC/bytestring-lexing-$VERSION/opt/hpc/vanilla/html/bytestring-lexing-$VERSION/hpc_index.html`.
+For v1/classic builds, add `--enable-coverage` to the configure
+step and also add `--keep-tix-files` to the test step, and the
+results are instead located at
 `./dist/hpc/vanilla/html/bytestring-lexing-$VERSION/hpc_index.html`.
-If you're not interested in the coverage of the test suite, then
-you needn't pass the `--enable-coverage` nor `--keep-tix-files`
-flags. Note that older versions of cabal used the flag name
-`--enable-library-coverage` instead of `--enable-coverage`. And
-IIRC hpc integration in cabal was broken for ghc-7.6.
+For very old versions of Cabal, you must use `--enable-library-coverage`
+in lieu of `--enable-coverage`.
 
 
 ### Benchmarks
