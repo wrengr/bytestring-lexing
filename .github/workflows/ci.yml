@@ -32,8 +32,8 @@ jobs:
         ghc: ['8.0.2', '8.2.2', '8.4.4', '8.6.5', '8.8.4', '8.10.3', '9.0.1']
         include:
         # This package has no build details sepcific to Win/Mac,
-        # so (in conjunction with the full list above for Ubuntu)
-        # building for the latest GHC should be sufficent.
+        # so building for the latest GHC should be sufficent
+        # (in conjunction with the full list above for Ubuntu).
         - os: windows-latest
           ghc: 'latest'
         - os: macOS-latest
@@ -86,14 +86,14 @@ jobs:
     # TODO(2021-10-23): if we run into issues with Windows builds
     # being flakey, then we should use Bytestring's hack of:
     #   ```
-    #   bld() { cabal build bytestring-lexing:tests; }
+    #   bld() { cabal build .:tests; }
     #   bld || bld || bld
     #   ```
     # to try building the tests a few times before admitting failure.
     # <https://github.com/haskell/actions/issues/36>
     - name: Test
       run: cabal test all -j1
-    ## We have no benchmarks yet
+    ## BUG: Our benchmarks aren't hooked into cabal yet.
     #- name: Bench
     #  run: cabal bench --benchmark-option=-l all
     - name: Haddock
