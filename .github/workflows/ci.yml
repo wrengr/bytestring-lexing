@@ -22,9 +22,6 @@ jobs:
   build:
     name: ${{ matrix.os }} / ghc ${{ matrix.ghc }}
     runs-on: ${{ matrix.os }}
-    # Don't fail-fast if the newest release can't be found yet.
-    # TODO: may have to remove the `fail-fast:true` line for this to work...
-    continue-on-error: ${{ matrix.ghc == '9.2.1' }}
     strategy:
       fail-fast: true
       matrix:
