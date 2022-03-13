@@ -1,5 +1,5 @@
 ----------------------------------------------------------------
--- wren gayle romano <wren@cpan.org>                ~ 2021.11.02
+-- wren gayle romano <wren@cpan.org>                ~ 2021.12.04
 ----------------------------------------------------------------
 
 -- Cabal >=1.10 is required by Hackage.
@@ -7,7 +7,7 @@ Cabal-Version:  >= 1.10
 Build-Type:     Simple
 
 Name:           bytestring-lexing
-Version:        0.5.0.8
+Version:        0.5.0.9
 Stability:      provisional
 Homepage:       https://wrengr.org/software/hackage.html
 Bug-Reports:    https://github.com/wrengr/bytestring-lexing/issues
@@ -39,8 +39,11 @@ Description:
 Extra-source-files:
     AUTHORS, CHANGELOG, README.md
 
--- This should work as far back as GHC 7.4.1, but we don't verify that by CI.
+-- This should work as far back as GHC 7.4.1 (== the lower-bound
+-- on base), but we don't verify that by CI therefore we don't list it.
 -- <https://github.com/wrengr/bytestring-lexing/actions?query=workflow%3Aci>
+-- For older versions of GHC and older versions of this library, see:
+-- <https://matrix.hackage.haskell.org/#/package/bytestring-lexing/>
 Tested-With:
     GHC ==8.0.2,
     GHC ==8.2.2,
@@ -67,6 +70,8 @@ Library
     -- These lower bounds are probably more restrictive than
     -- necessary.  But then, we don't maintain any CI tests for
     -- older versions, so these are the lowest bounds we've verified.
+    -- (Version 0.5.0.2 had base>=4, and according to the matrix
+    -- link above, that does build on GHC 7.0.4 == base-4.3.1.0).
     --
     -- TODO(2021-10-23): bytestring 0.11.0.0 changed the internal
     --   representation of ByteStrings to remove the offset.  While
