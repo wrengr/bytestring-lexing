@@ -1,20 +1,25 @@
-----------------------------------------------------------------
--- wren gayle romano <wren@cpan.org>                ~ 2021.12.04
-----------------------------------------------------------------
+Cabal-Version:  2.2
+-- Cabal >=2.2 is required for:
+--    <https://cabal.readthedocs.io/en/latest/cabal-package.html#common-stanzas>
+-- Since 2.1, the Cabal-Version must be the absolutely first thing
+-- in the file, even before comments.  Also, no longer uses ">=".
+--    <https://github.com/haskell/cabal/issues/4899>
 
--- Cabal >=1.10 is required by Hackage.
-Cabal-Version:  >= 1.10
-Build-Type:     Simple
+----------------------------------------------------------------
+-- wren gayle romano <wren@cpan.org>                ~ 2022.05.25
+----------------------------------------------------------------
 
 Name:           bytestring-lexing
 Version:        0.5.0.9
+Build-Type:     Simple
 Stability:      provisional
 Homepage:       https://wrengr.org/software/hackage.html
 Bug-Reports:    https://github.com/wrengr/bytestring-lexing/issues
 Author:         wren gayle romano, Don Stewart
 Maintainer:     wren@cpan.org
-Copyright:      Copyright (c) 2012–2021 wren gayle romano, 2008–2011 Don Stewart
-License:        BSD3
+Copyright:      2012–2022 wren romano, 2008–2011 Don Stewart
+-- Cabal-2.2 requires us to say "BSD-3-Clause" not "BSD3"
+License:        BSD-3-Clause
 License-File:   LICENSE
 
 Category:       Data
