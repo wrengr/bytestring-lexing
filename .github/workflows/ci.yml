@@ -25,14 +25,14 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        # Note(2021-10-23): All these versions resolve to using the
-        #   latest Cabal (3.4.0.0); they do *not* use the version of
-        #   Cabal that originally shipped with the version of GHC.
-        # BUG(2022-08-28): ubuntu-latest should have ghc-9.4.1 (and
-        # Cabal 3.6.2.0, GHCup 0.1.18.0, Stack 2.7.5) according to
-        # <https://github.com/actions/runner-images/blob/ubuntu20/20220821.1/images/linux/Ubuntu2004-Readme.md>
-        # But it's not working for me. The haskell/actions/setup resolves '9.4' to '9.4.2' and then uses GHCup to install it, but then apt-get also tries to install it and fails.
-        # NOTE(2202-08-28): the latest released versions are 9.2.4 and 9.4.2; and the haskell/actions supports 9.2.4 at least; so it'd be nice to update this listing to include those.
+        # NOTE(2021-10-23): All these versions resolve to using the
+        #   latest Cabal (>=3.4.0.0); they do *not* use the version
+        #   of Cabal that originally shipped with the version of GHC.
+        # NOTE(2022-08-28): the newest release is ghc-9.4.2, but
+        #   that's not on ubuntu-latest yet; and if something's not
+        #   preinstalled, then haskell/actions/setup will use GHCup
+        #   to install it but then (the script below) will also try
+        #   to install it via apt-get which will fail.
         os: [ubuntu-latest]
         ghc: ['8.0.2', '8.2.2', '8.4.4', '8.6.5', '8.8.4', '8.10.3', '9.0.1', '9.2.4', '9.4.1']
         include:

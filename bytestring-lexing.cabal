@@ -10,7 +10,7 @@ Cabal-Version:  2.2
 ----------------------------------------------------------------
 
 Name:           bytestring-lexing
-Version:        0.5.0.10
+Version:        0.5.0.9
 Build-Type:     Simple
 Stability:      provisional
 Homepage:       https://wrengr.org/software/hackage.html
