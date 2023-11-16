@@ -6,11 +6,11 @@ Cabal-Version:  2.2
 --    <https://github.com/haskell/cabal/issues/4899>
 
 ----------------------------------------------------------------
--- wren gayle romano <wren@cpan.org>                ~ 2023.03.19
+-- wren gayle romano <wren@cpan.org>                ~ 2023.11.15
 ----------------------------------------------------------------
 
 Name:           bytestring-lexing
-Version:        0.5.0.10
+Version:        0.5.0.11
 Build-Type:     Simple
 Stability:      provisional
 Homepage:       https://wrengr.org/software/hackage.html
