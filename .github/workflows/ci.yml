@@ -34,7 +34,7 @@ jobs:
         #   to install it but then (the script below) will also try
         #   to install it via apt-get which will fail.
         os: [ubuntu-latest]
-        ghc: ['8.0.2', '8.2.2', '8.4.4', '8.6.5', '8.8.4', '8.10.3', '9.0.1', '9.2.4', '9.4.4', '9.6.1']
+        ghc: ['8.0.2', '8.2.2', '8.4.4', '8.6.5', '8.8.4', '8.10.3', '9.0.1', '9.2.4', '9.4.8', '9.6.4', '9.8.1']
         include:
         # This package has no build details specific to Win/Mac,
         # so building for the latest GHC should be sufficient
@@ -45,7 +45,7 @@ jobs:
           ghc: 'latest'
     steps:
     - uses: actions/checkout@v4
-    - uses: haskell/actions/setup@v2.4.7
+    - uses: haskell-actions/setup@v2.6.1
       id: setup-haskell-cabal
       with:
         ghc-version: ${{ matrix.ghc }}
@@ -115,7 +115,7 @@ jobs:
   #  # See <https://github.com/vmactions/freebsd-vm#under-the-hood>
   #  runs-on: macos-latest
   #  steps:
-  #  - uses: actions/checkout@v2.3.5
+  #  - uses: actions/checkout@v4
   #  - name: Test
   #    id: build-freebsd
   #    uses: vmactions/freebsd-vm@v0.1.5
