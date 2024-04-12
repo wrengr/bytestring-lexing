@@ -1,10 +1,10 @@
 {-# OPTIONS_GHC -Wall -fwarn-tabs #-}
 {-# LANGUAGE BangPatterns #-}
 ----------------------------------------------------------------
---                                                    2021.10.17
+--                                                    2024-04-11
 -- |
 -- Module      :  Data.ByteString.Lex.Internal
--- Copyright   :  Copyright (c) 2010--2021 wren gayle romano
+-- Copyright   :  Copyright (c) 2010--2024 wren gayle romano
 -- License     :  BSD2
 -- Maintainer  :  wren@cpan.org
 -- Stability   :  provisional
@@ -62,7 +62,8 @@ addDigit n w = n * 10 + toDigit w
 ----------------------------------------------------------------
 ----- Integral logarithms
 
--- TODO: cf. integer-gmp:GHC.Integer.Logarithms made available in version 0.3.0.0 (ships with GHC 7.2.1).
+-- TODO: cf. integer-gmp:GHC.Integer.Logarithms made available in
+-- version 0.3.0.0 (ships with GHC 7.2.1).
 -- <http://haskell.org/ghc/docs/7.2.1/html/libraries/integer-gmp-0.3.0.0/GHC-Integer-Logarithms.html>
 
 
@@ -70,7 +71,7 @@ addDigit n w = n * 10 + toDigit w
 -- <http://www.haskell.org/pipermail/haskell-cafe/2009-August/065854.html>
 -- modified to use 'quot' instead of 'div', to ensure strictness,
 -- and using more guard notation (but this last one's compiled
--- away). See @./test/bench/BenchNumDigits.hs@ for other implementation
+-- away). See @./bench/BenchNumDigits.hs@ for other implementation
 -- choices.
 --
 -- | @numDigits b n@ computes the number of base-@b@ digits required
@@ -93,14 +94,25 @@ numDigits !b0 !n0
     | b0 <= 1   = error (_numDigits ++ _nonpositiveBase)
     | n0 <  0   = error (_numDigits ++ _negativeNumber)
     -- BUG: need to check n0 to be sure we won't overflow Int
-    | otherwise = 1 + fst (ilog b0 n0)
+    | otherwise = finish (ilog b0 n0)
     where
+    finish (ND e _) = 1 + e
     ilog !b !n
-        | n < b     = (0, n)
-        | r < b     = ((,) $! 2*e) r
-        | otherwise = ((,) $! 2*e+1) $! (r `quot` b)
+        | n < b     = ND 0 n
+        -- TODO(2024-04-11): Check core to see whether these @(2*)@
+        -- ops are properly weakened to shifts.
+        | r < b     = ND (2*e) r
+        | otherwise = ND (2*e+1) (r `quot` b)
         where
-        (e, r) = ilog (b*b) n
+        -- TODO(2024-04-11): Benchmark this lazy-pattern matching,
+        -- vs using a strict pattern (and alas less guard-notation,
+        -- to ensure we only evaluate it when needed).
+        ND e r = ilog (b*b) n
+
+-- TODO(2024-04-11): Benchmark this change in the implementation
+-- (relative to using @(,)@ and @($!)@).  Also, need to re-run all
+-- the benchmarks anyways, to see how things've changed on newer GHC.
+data ND = ND {-#UNPACK#-}!Int !Integer
 
 
 -- | Compute the number of base-@2^p@ digits required to represent a
@@ -134,6 +146,8 @@ numDecimalDigits n0
     | n0 < 0     = error (_numDecimalDigits ++ _negativeNumber)
     -- Unfortunately this causes significant (1.2x) slowdown since
     -- GHC can't see it will always fail for types other than Integer...
+    -- TODO(2024-04-11): See if we can't do more static-analysis
+    -- code to optimize this path (a~la my C++ safe comparisons)
     | n0 > limit = numDigits 10 (toInteger n0)
     | otherwise  = go 1 (fromIntegral n0 :: Word64)
     where

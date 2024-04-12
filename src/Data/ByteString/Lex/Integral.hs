@@ -33,7 +33,7 @@ module Data.ByteString.Lex.Integral
     -- * Octal conversions
     , readOctal
     , packOctal
-    -- asOctal -- this will be really hard to make efficient...
+    -- TODO: asOctal -- this will be really hard to make efficient...
     ) where
 
 import           Data.ByteString          (ByteString)
@@ -79,7 +79,8 @@ readSigned f xs
 ----- Decimal
 
 {-
--- We unroll this definition in order to reduce the number of conversions from native Int to the Integral type.
+-- We unroll this definition in order to reduce the number of
+-- conversions from native Int to the Integral type.
 readDecimalSimple :: (Integral a) => ByteString -> Maybe (a, ByteString)
 readDecimalSimple = start
     where

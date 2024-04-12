@@ -23,20 +23,20 @@ module Data.ByteString.Lex.Fractional
     -- packSigned
     -- * Decimal conversions
     , readDecimal
-    -- packDecimal
+    -- TODO: packDecimal
     -- TODO: asDecimal -- this will be really hard to make efficient...
     -- * Hexadecimal conversions
     , readHexadecimal
-    -- packHexadecimal
-    -- asHexadecimal
+    -- TODO: packHexadecimal
+    -- TODO: asHexadecimal
     -- * Octal conversions
     , readOctal
-    -- packOctal
-    -- asOctal -- this will be really hard to make efficient...
+    -- TODO: packOctal
+    -- TODO: asOctal -- this will be really hard to make efficient...
     -- * Exponential conversions
     , readExponential
-    -- packExponential
-    -- asExponential
+    -- TODO: packExponential
+    -- TODO: asExponential
     -- * Precision-limited conversions
     , decimalPrecision
     , readDecimalLimited
