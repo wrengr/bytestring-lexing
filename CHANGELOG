@@ -1,3 +1,5 @@
+0.5.0.13 (2024-08-29):
+    - Updated version bounds for GHC 9.10
 0.5.0.11 (2023-11-15):
     - Updated version bounds for base-4.19, bytestring-0.12, tasty-1.5
 0.5.0.10 (2023-03-19):

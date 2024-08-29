@@ -34,7 +34,7 @@ jobs:
         #   to install it but then (the script below) will also try
         #   to install it via apt-get which will fail.
         os: [ubuntu-latest]
-        ghc: ['8.0.2', '8.2.2', '8.4.4', '8.6.5', '8.8.4', '8.10.3', '9.0.1', '9.2.4', '9.4.8', '9.6.4', '9.8.1']
+        ghc: ['8.0.2', '8.2.2', '8.4.4', '8.6.5', '8.8.4', '8.10.3', '9.0.1', '9.2.4', '9.4.8', '9.6.5', '9.8.2', '9.10.1']
         include:
         # This package has no build details specific to Win/Mac,
         # so building for the latest GHC should be sufficient
@@ -45,7 +45,7 @@ jobs:
           ghc: 'latest'
     steps:
     - uses: actions/checkout@v4
-    - uses: haskell-actions/setup@v2.7.0
+    - uses: haskell-actions/setup@v2.7.4
       id: setup-haskell-cabal
       with:
         ghc-version: ${{ matrix.ghc }}
