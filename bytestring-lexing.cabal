@@ -6,18 +6,18 @@ Cabal-Version:  2.2
 --    <https://github.com/haskell/cabal/issues/4899>
 
 ----------------------------------------------------------------
--- wren gayle romano <wren@cpan.org>                ~ 2024-08-29
+-- wren gayle romano <wren@cpan.org>                ~ 2025-02-11
 ----------------------------------------------------------------
 
 Name:           bytestring-lexing
-Version:        0.5.0.14
+Version:        0.5.0.15
 Build-Type:     Simple
 Stability:      provisional
 Homepage:       https://wrengr.org/software/hackage.html
 Bug-Reports:    https://github.com/wrengr/bytestring-lexing/issues
 Author:         wren gayle romano, Don Stewart
 Maintainer:     wren@cpan.org
-Copyright:      2012–2024 wren romano, 2008–2011 Don Stewart
+Copyright:      2012–2025 wren romano, 2008–2011 Don Stewart
 -- Cabal-2.2 requires us to say "BSD-3-Clause" not "BSD3"
 License:        BSD-3-Clause
 License-File:   LICENSE
@@ -62,7 +62,8 @@ Tested-With:
     GHC ==9.4.8,
     GHC ==9.6.5,
     GHC ==9.8.2,
-    GHC ==9.10.1
+    GHC ==9.10.1,
+    GHC ==9.12.1
 
 Source-Repository head
     Type:     git
@@ -85,7 +86,7 @@ Common library-build-depends
     --   they do offer pattern synonyms for backwards combatibility,
     --   we should re-verify that our code doesn't depend on the details.
     --   <https://github.com/haskell/bytestring/pull/175>
-    Build-Depends:  base              >= 4.9     && < 4.21
+    Build-Depends:  base              >= 4.9     && < 4.22
                  ,  bytestring        >= 0.10.8  && < 0.13
 
 Library
