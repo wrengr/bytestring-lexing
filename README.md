@@ -1,8 +1,9 @@
 bytestring-lexing
 =================
+[![CI Status](https://github.com/wrengr/bytestring-lexing/actions/workflows/ci.yml/badge.svg)](https://github.com/wrengr/bytestring-lexing/actions?query=workflow%3Aci+-event%3Apull_request)
 [![Hackage version](https://img.shields.io/hackage/v/bytestring-lexing.svg?style=flat)](https://hackage.haskell.org/package/bytestring-lexing) 
-[![Build Status](https://github.com/wrengr/bytestring-lexing/workflows/ci/badge.svg)](https://github.com/wrengr/bytestring-lexing/actions?query=workflow%3Aci)
-[![Dependencies](https://img.shields.io/hackage-deps/v/bytestring-lexing.svg?style=flat)](http://packdeps.haskellers.com/specific?package=bytestring-lexing)
+[![Stackage LTS version](https://stackage.org/package/bytestring-lexing/badge/lts)](https://stackage.org/lts/package/bytestring-lexing)
+[![Stackage Nightly version](https://stackage.org/package/bytestring-lexing/badge/nightly)](https://stackage.org/nightly/package/bytestring-lexing)
 
 The bytestring-lexing package offers extremely efficient `ByteString`
 parsers for some common lexemes: namely integral and fractional
